@@ -48,7 +48,7 @@ namespace NetworkUtil
                 socket2?.TheSocket?.Shutdown(SocketShutdown.Both);
                 socket2?.TheSocket?.Close();
             }
-            // Do nothing with the exception, since shutting down the server will likely result in 
+            // Do nothing with the exception, since shutting down the server will likely result in
             // a prematurely closed socket
             // If the timeout is long enough, the shutdown should succeed
             catch (Exception) { }
@@ -80,8 +80,6 @@ namespace NetworkUtil
             local = tempLocal;
             remote = tempRemote;
         }
-
-
         /*** Begin Basic Connectivity Tests ***/
         [TestMethod]
         public void TestConnect()
@@ -167,11 +165,11 @@ namespace NetworkUtil
 
 
         /// <summary>
-        /// This is an example of a parameterized test. 
-        /// DataRow(true) and DataRow(false) means this test will be 
+        /// This is an example of a parameterized test.
+        /// DataRow(true) and DataRow(false) means this test will be
         /// invoked once with an argument of true, and once with false.
         /// This way we can test your Send method from both
-        /// client and server sockets. In theory, there should be no 
+        /// client and server sockets. In theory, there should be no
         /// difference, but odd things can happen if you save static
         /// state (such as sockets) in your networking library.
         /// </summary>
@@ -213,7 +211,7 @@ namespace NetworkUtil
 
             Networking.GetData(testRemoteSocketState);
 
-            // Note that waiting for data like this is *NOT* how the networking library is 
+            // Note that waiting for data like this is *NOT* how the networking library is
             // intended to be used. This is only for testing purposes.
             // Normally, you would provide an OnNetworkAction that handles the data.
             NetworkTestHelper.WaitForOrTimeout(() => testRemoteSocketState.GetData().Length > 0, NetworkTestHelper.timeout);
@@ -236,7 +234,7 @@ namespace NetworkUtil
 
             Networking.Send(testRemoteSocketState.TheSocket, "a");
             Networking.GetData(testLocalSocketState);
-            // Note that waiting for data like this is *NOT* how the networking library is 
+            // Note that waiting for data like this is *NOT* how the networking library is
             // intended to be used. This is only for testing purposes.
             // Normally, you would provide an OnNetworkAction that handles the data.
             NetworkTestHelper.WaitForOrTimeout(() => testLocalSocketState.GetData().Length > 0, NetworkTestHelper.timeout);
@@ -262,14 +260,14 @@ namespace NetworkUtil
 
             Networking.Send(testLocalSocketState.TheSocket, "a");
             Networking.GetData(testRemoteSocketState);
-            // Note that waiting for data like this is *NOT* how the networking library is 
+            // Note that waiting for data like this is *NOT* how the networking library is
             // intended to be used. This is only for testing purposes.
             // Normally, you would provide an OnNetworkAction that handles the data.
             NetworkTestHelper.WaitForOrTimeout(() => testRemoteSocketState.GetData().Length > 0, NetworkTestHelper.timeout);
 
             Networking.Send(testLocalSocketState.TheSocket, "b");
             Networking.GetData(testRemoteSocketState);
-            // Note that waiting for data like this is *NOT* how the networking library is 
+            // Note that waiting for data like this is *NOT* how the networking library is
             // intended to be used. This is only for testing purposes.
             // Normally, you would provide an OnNetworkAction that handles the data.
             NetworkTestHelper.WaitForOrTimeout(() => testRemoteSocketState.GetData().Length > 1, NetworkTestHelper.timeout);
@@ -442,8 +440,6 @@ namespace NetworkUtil
             Assert.AreEqual(message.ToString(), localCopy.ToString());
         }
 
-
-
         [DataRow(true)]
         [DataRow(false)]
         [DataTestMethod]
@@ -472,8 +468,28 @@ namespace NetworkUtil
 
         /*** End Send/Receive Tests ***/
 
-
         //TODO: Add more of your own tests here
+
+        [DataRow(true)]
+        [DataRow(false)]
+        [DataTestMethod]
+        public void TestSendAndClose(bool clientSide)
+        {
+            SetupTestConnections(clientSide, out testListener, out testLocalSocketState, out testRemoteSocketState);
+
+            testLocalSocketState.OnNetworkAction = x => { };
+            testRemoteSocketState.OnNetworkAction = x => { };
+
+            Networking.SendAndClose(testLocalSocketState.TheSocket, "a");
+            Networking.GetData(testRemoteSocketState);
+
+            Assert.IsTrue(!testLocalSocketState.TheSocket.Connected);
+            Assert.IsTrue(testRemoteSocketState.TheSocket.Connected);
+
+        }
+
+
+
 
     }
 }

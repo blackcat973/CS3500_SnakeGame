@@ -14,6 +14,8 @@ namespace NetworkUtil
         // 5 seconds should be more than enough time for any reasonable network operation
         public const int timeout = 5000;
 
+        public const int timeout2 = 10000;
+
         /// <summary>
         /// Waits for either the specified number of milliseconds, or until expr is true,
         /// whichever comes first.
@@ -30,7 +32,6 @@ namespace NetworkUtil
                 waited += 15;
             }
         }
-
 
         public static void SetupSingleConnectionTest(out TcpListener listener, out SocketState? client, out SocketState? server)
         {
@@ -54,7 +55,6 @@ namespace NetworkUtil
             client = clientResult;
             server = serverResult;
         }
-
     }
 }
 

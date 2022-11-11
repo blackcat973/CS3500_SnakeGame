@@ -1,4 +1,8 @@
-﻿using System;
+﻿//  Nov, 11, 2022
+//  PS7
+//  MinGyu Jung & SangYoon Cho.
+
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -22,11 +26,19 @@ public static class Networking
     {
         TcpListener listener = new TcpListener(IPAddress.Any, port);
 
-        Tuple<Action<SocketState>, TcpListener> tuple = new Tuple<Action<SocketState>, TcpListener>(toCall, listener);
+        try
+        {
+            // Make a tuple to pass the information of SocketState delegate and port.
+            Tuple<Action<SocketState>, TcpListener> tuple = new Tuple<Action<SocketState>, TcpListener>(toCall, listener);
 
-        listener.Start();
+            listener.Start();
 
-        listener.BeginAcceptSocket(AcceptNewClient, tuple);
+            // Start Event-Loop of Acceptance
+            listener.BeginAcceptSocket(AcceptNewClient, tuple);
+        }
+        catch
+        {
+        }
 
         return listener;
     }
@@ -56,8 +68,10 @@ public static class Networking
         Action<SocketState> socketStateValue = tuple.Item1;      // Action<SocketState>
         TcpListener tcpListenerValue = tuple.Item2;              // TcpListener
 
+        // Before trying to invoke BeginAcceptSocket, if state has error
         try
         {
+            // The Socket information passed from StartServer
             Socket newClient = tcpListenerValue.EndAcceptSocket(ar);
             SocketState state = new SocketState(socketStateValue, newClient);
 
@@ -65,15 +79,25 @@ public static class Networking
                 return;
 
             state.OnNetworkAction(state);
+        }
+        catch (Exception e)
+        {
+            // With error state, it doesn't begin accept client process
+            SocketState state = new SocketState(socketStateValue, e.ToString());
+            state.OnNetworkAction(state);
+            return;
+        }
 
-            //state.TheSocket.BeginReceive(state.buffer, 0, state.buffer.Length, SocketFlags.None,
-            //    ReceiveCallback, state);
-
+        // After trying to invoke BeginAcceptSocket, if some error occurs during the connection process
+        try
+        {
             tcpListenerValue.BeginAcceptSocket(AcceptNewClient, tuple);
         }
-        catch
+        catch (Exception e2)
         {
-            SocketState state = new SocketState(socketStateValue, "Connection error occurred!");
+            // Notice that state has some error so that server can't begin acceptance.
+            // The event-loop should not continue if an error occurs.
+            SocketState state = new SocketState(socketStateValue, e2.ToString());
             state.OnNetworkAction(state);
         }
     }
@@ -107,9 +131,6 @@ public static class Networking
     /// <param name="port">The port on which the server is listening</param>
     public static void ConnectToServer(Action<SocketState> toCall, string hostName, int port)
     {
-        // TODO: This method is incomplete, but contains a starting point
-        //       for decoding a host address
-
         // Establish the remote endpoint for the socket.
         IPHostEntry ipHostInfo;
         IPAddress ipAddress = IPAddress.None;
@@ -129,7 +150,7 @@ public static class Networking
             // Didn't find any IPV4 addresses
             if (!foundIPV4)
             {
-                // TODO: Indicate an error to the user, as specified in the documentation
+                // Error, invalid IPv4 address
                 toCall(new SocketState(toCall, "IPV4 is not found"));
             }
         }
@@ -142,7 +163,7 @@ public static class Networking
             }
             catch
             {
-                // TODO: Indicate an error to the user, as specified in the documentation
+                // Error, invalid hostName
                 toCall(new SocketState(toCall, "Host name is invalid."));
             }
         }
@@ -157,14 +178,23 @@ public static class Networking
         SocketState state = new SocketState(toCall, socket);
 
 
-        // TODO: Finish the remainder of the connection process as specified.
-        IAsyncResult result = socket.BeginConnect(ipAddress, port, ConnectedCallback, state);
-        bool success = result.AsyncWaitHandle.WaitOne(3000, true);
-
-        if (!success || !socket.Connected)
+        //  If anything goes wrong during the connection process, catch exception and invoke
+        //  toCall with a new SocketState with its ErrorOccurred flag set to true and error message.
+        try
         {
-            toCall(new SocketState(toCall, "Connection issue."));
-            socket.Close();
+            //https://stackoverflow.com/questions/1062035/how-to-configure-socket-connect-timeout
+            IAsyncResult result = state.TheSocket.BeginConnect(ipAddress, port, ConnectedCallback, state);
+            bool success = result.AsyncWaitHandle.WaitOne(3000, true);
+
+            if (!(success && socket.Connected))
+            {
+                toCall(new SocketState(toCall, "Connection issue."));
+                state.TheSocket.Close();
+            }
+        }
+        catch (Exception e)
+        {
+            toCall(new SocketState(toCall, e.ToString()));
         }
     }
 
@@ -188,6 +218,8 @@ public static class Networking
         try
         {
             state.TheSocket.EndConnect(ar);
+            // A connection is succesfully established,
+            // Now that we know we are connected, we can start sending messages
             state.OnNetworkAction(state);
         }
         catch
@@ -195,7 +227,6 @@ public static class Networking
             state.ErrorOccurred = true;
             state.ErrorMessage = "Disconnected.";
         }
-        // Now that we know we are connected, we can start sending messages
     }
     /////////////////////////////////////////////////////////////////////////////////////////
     // Server and Client Common Code
@@ -223,10 +254,10 @@ public static class Networking
                     ReceiveCallback, state);
 
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
             state.ErrorOccurred = true;
-            state.ErrorMessage = ex.ToString();
+            state.ErrorMessage = e.ToString();
             state.OnNetworkAction(state);
         }
 
@@ -257,28 +288,31 @@ public static class Networking
         ///      This must be done in a thread-safe manner with respect to the SocketState methods that access or modify its
         ///      string builder.
         SocketState state = (SocketState)ar.AsyncState!;
-        int numBytes = state.TheSocket.EndReceive(ar);
 
-        //string data = Encoding.UTF8.GetString(state.messageBuffer, 0, numBytes);
-
-        if (numBytes > 0)
+        try
         {
-            //thread-safe manner
-            lock (state)
+            int numBytes = state.TheSocket.EndReceive(ar);
+
+            //string data = Encoding.UTF8.GetString(state.messageBuffer, 0, numBytes);
+            if (numBytes > 0)
             {
-                state.data.Append(Encoding.UTF8.GetString(state.buffer, 0, numBytes));
+                //thread-safe manner
+                lock (state.data)
+                {
+                    state.data.Append(Encoding.UTF8.GetString(state.buffer, 0, numBytes));
 
+                }
+                ///  (2) Call the saved delegate (OnNetworkAction) allowing the user to deal with this data.
+                state.OnNetworkAction(state);
             }
+            //https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.endreceive?view=net-7.0
         }
-        //https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.endreceive?view=net-7.0
-        else
+        catch (Exception e)
         {
+
+            state.ErrorOccurred = true;
+            state.ErrorMessage = e.ToString();
         }
-
-        ///  (2) Call the saved delegate (OnNetworkAction) allowing the user to deal with this data.
-
-        state.OnNetworkAction(state);
-
     }
     /// <summary>
     /// Begin the asynchronous process of sending data via BeginSend, using SendCallback to finalize the send process.
@@ -294,7 +328,6 @@ public static class Networking
     {
         if (!socket.Connected)
         {
-            socket.Close();
             return false;
         }
 
@@ -330,9 +363,15 @@ public static class Networking
     /// </param>
     private static void SendCallback(IAsyncResult ar)
     {
-        Socket socket = (Socket)ar.AsyncState!;
-        /// Uses EndSend to finalize the send.
-        socket.EndSend(ar);
+        try
+        {
+            Socket socket = (Socket)ar.AsyncState!;
+            /// Uses EndSend to finalize the send.
+            socket.EndSend(ar);
+        }
+        catch
+        {
+        }
     }
 
     /// <summary>
@@ -389,9 +428,15 @@ public static class Networking
     /// </param>
     private static void SendAndCloseCallback(IAsyncResult ar)
     {
-        Socket socket = (Socket)ar.AsyncState!;
-        /// Uses EndSend to finalize the send.
-        socket.EndSend(ar);
-        socket.Close();
+        try
+        {
+            Socket socket = (Socket)ar.AsyncState!;
+            /// Uses EndSend to finalize the send.
+            socket.EndSend(ar);
+            socket.Close();
+        }
+        catch
+        {
+        }
     }
 }
