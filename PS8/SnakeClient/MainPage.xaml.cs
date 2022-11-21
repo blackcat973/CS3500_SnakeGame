@@ -1,11 +1,20 @@
-﻿namespace SnakeGame;
+﻿using GameSystem;
+using GameModel;
+
+namespace SnakeGame;
+
 
 public partial class MainPage : ContentPage
 {
+
+    private GameController gameController = new();
+
     public MainPage()
     {
         InitializeComponent();
         graphicsView.Invalidate();
+
+        //gameController.Connected += 
     }
 
     void OnTapped(object sender, EventArgs args)
@@ -67,8 +76,12 @@ public partial class MainPage : ContentPage
             return;
         }
         DisplayAlert("Delete this", "Code to connect to server goes here", "OK");
-     
+
+        gameController.Connect(serverText.Text, nameText.Text);
+
         keyboardHack.Focus();
+
+
     }
 
     /// <summary>

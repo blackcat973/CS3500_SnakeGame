@@ -60,4 +60,8 @@
   <ItemGroup>
     <Folder Include="Resources\" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GameController\GameController.csproj" />
+    <ProjectReference Include="..\GameModel\GameWorld.csproj" />
+  </ItemGroup>
 </Project>
