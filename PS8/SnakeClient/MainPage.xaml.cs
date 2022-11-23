@@ -1,5 +1,4 @@
 ﻿using GameSystem;
-using GameModel;
 
 namespace SnakeGame;
 
@@ -13,8 +12,13 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
         graphicsView.Invalidate();
+        gameController.DatasArrived += DataArrived;
+    }
 
-        //gameController.Connected += 
+    // got informed that data is arrived. 
+    private void DataArrived()
+    {
+        throw new NotImplementedException();
     }
 
     void OnTapped(object sender, EventArgs args)
@@ -28,7 +32,7 @@ public partial class MainPage : ContentPage
         String text = entry.Text.ToLower();
         if (text == "w")
         {
-            // Move up
+            gameController.InputKey("w");
         }
         else if (text == "a")
         {
@@ -75,9 +79,11 @@ public partial class MainPage : ContentPage
             DisplayAlert("Error", "Name must be less than 16 characters", "OK");
             return;
         }
-        DisplayAlert("Delete this", "Code to connect to server goes here", "OK");
+        //DisplayAlert("Delete this", "Code to connect to server goes here", "OK");
 
         gameController.Connect(serverText.Text, nameText.Text);
+
+        gameController.InfoEntered(nameText.Text);
 
         keyboardHack.Focus();
 

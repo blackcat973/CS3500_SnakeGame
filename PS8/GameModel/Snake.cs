@@ -2,21 +2,31 @@
  * This code is from GameLab\Models\Player.cs, just for simple code
  */
 
+using Newtonsoft.Json;
 using SnakeGame;
-using Vector2D;
+//using Vector2D;
 
 namespace GameWorld
 {
     public class Snake
     {
+        [JsonProperty(PropertyName = "snake")]
         public int ID { get; private set; }
+        [JsonProperty(PropertyName = "wall")]
         public string Name { get; private set; }
-        public List<Vector2D.Vector2D> Body;
-        public Vector2D.Vector2D Dir;
+        [JsonProperty(PropertyName = "body")]
+        public List<Vector2D> Body;
+        [JsonProperty(PropertyName = "dir")]
+        public Vector2D Dir;
+        [JsonProperty(PropertyName = "score")]
         public int Score { get; private set; }
+        [JsonProperty(PropertyName = "died")]
         public bool Died { get; private set; } = false;
+        [JsonProperty(PropertyName = "alive")]
         public bool Alive { get; private set; } = true;
+        [JsonProperty(PropertyName = "dc")]
         public bool Disconnected { get; private set; } = false;
+        [JsonProperty(PropertyName = "join")]
         public bool Join { get; private set; } = false;
 
 
@@ -24,9 +34,9 @@ namespace GameWorld
         {
             ID = id;
             Name = name;
-            Body = new List<Vector2D.Vector2D>();
-            Body.Add(new Vector2D.Vector2D(x, y)); Body.Add(new Vector2D.Vector2D(x, y - 5));
-            Dir = new Vector2D.Vector2D(1, 0);
+            Body = new List<Vector2D>();
+            Body.Add(new Vector2D(x, y)); Body.Add(new Vector2D(x, y - 5));
+            Dir = new Vector2D(1, 0);
             Score = score;
         }
     }
