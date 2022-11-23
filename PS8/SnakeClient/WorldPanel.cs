@@ -13,10 +13,18 @@ using Microsoft.Maui;
 using System.Net;
 using Font = Microsoft.Maui.Graphics.Font;
 using SizeF = Microsoft.Maui.Graphics.SizeF;
+using GameWorld;
 
 namespace SnakeGame;
 public class WorldPanel : IDrawable
 {
+    public delegate void ObjectDrawer(object o, ICanvas canvas);
+
+    private GraphicsView graphicsView = new();
+
+    private int viewSize = 900;
+    private World theWorld;
+
     private IImage wall;
     private IImage background;
 
@@ -41,6 +49,14 @@ public class WorldPanel : IDrawable
 
     public WorldPanel()
     {
+        graphicsView.Drawable = this;
+        graphicsView.HeightRequest = 900;
+        graphicsView.WidthRequest = 900;
+    }
+
+    public void SetWorld(World w)
+    {
+        theWorld = w;
     }
 
     private void InitializeDrawing()
@@ -55,6 +71,7 @@ public class WorldPanel : IDrawable
         if ( !initializedForDrawing )
             InitializeDrawing();
         
+        canvas.DrawImage(background, 0, 0, 900, 900);
         canvas.DrawImage(wall, 0, 0, wall.Width, wall.Height);
     }
 }

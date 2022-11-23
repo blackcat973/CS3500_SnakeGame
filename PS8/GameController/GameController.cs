@@ -1,5 +1,5 @@
 ﻿using NetworkUtil;
-using GameModel;
+using GameWorld;
 using System.Text.RegularExpressions;
 
 namespace GameSystem

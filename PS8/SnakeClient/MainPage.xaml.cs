@@ -1,5 +1,5 @@
 ﻿using GameSystem;
-using GameModel;
+using GameWorld;
 
 namespace SnakeGame;
 

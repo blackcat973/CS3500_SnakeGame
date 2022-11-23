@@ -3,7 +3,6 @@
  */
 
 using SnakeGame;
-using Vector2D;
 
 namespace GameWorld
 {
@@ -11,8 +10,8 @@ namespace GameWorld
     {
         public int ID { get; private set; }
         public string Name { get; private set; }
-        public List<Vector2D.Vector2D> Body;
-        public Vector2D.Vector2D Dir;
+        public List<Vector2D> Body;
+        public Vector2D Dir;
         public int Score { get; private set; }
         public bool Died { get; private set; } = false;
         public bool Alive { get; private set; } = true;
@@ -24,9 +23,9 @@ namespace GameWorld
         {
             ID = id;
             Name = name;
-            Body = new List<Vector2D.Vector2D>();
-            Body.Add(new Vector2D.Vector2D(x, y)); Body.Add(new Vector2D.Vector2D(x, y - 5));
-            Dir = new Vector2D.Vector2D(1, 0);
+            Body = new List<Vector2D>();
+            Body.Add(new Vector2D(x, y)); Body.Add(new Vector2D(x, y - 5));
+            Dir = new Vector2D(1, 0);
             Score = score;
         }
     }

@@ -6,7 +6,19 @@ using System.Threading.Tasks;
 
 namespace GameWorld
 {
-    internal class World
+    public class World
     {
+        public Dictionary<int, Snake> SnakePlayers;
+        public Dictionary<int, PowerUp> PowerUps;
+        public Dictionary<int, Walls> Walls;
+        public int Size { get; private set; }
+
+        public World(int _size) 
+        {
+            SnakePlayers= new Dictionary<int, Snake>();
+            PowerUps = new Dictionary<int, PowerUp>();
+            Size = _size;
+        }
+
     }
 }
