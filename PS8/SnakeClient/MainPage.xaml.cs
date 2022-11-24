@@ -10,15 +10,20 @@ public partial class MainPage : ContentPage
 
     public MainPage()
     {
+
         InitializeComponent();
-        graphicsView.Invalidate();
-        gameController.DatasArrived += DataArrived;
+        /// Use this method as an event handler for when the controller has updated the world
+        gameController.DatasArrived += OnFrame;
+
+        gameController.WorldCreate += drawingWorld;
+
     }
 
-    // got informed that data is arrived. 
-    private void DataArrived()
+    private void drawingWorld()
     {
-        throw new NotImplementedException();
+        worldPanel.SetWorld(gameController.World);
+
+        OnFrame();
     }
 
     void OnTapped(object sender, EventArgs args)
@@ -32,19 +37,23 @@ public partial class MainPage : ContentPage
         String text = entry.Text.ToLower();
         if (text == "w")
         {
-            gameController.InputKey("w");
+            gameController.InputKey("up");
         }
         else if (text == "a")
         {
-            // Move left
+            gameController.InputKey("left");
         }
         else if (text == "s")
         {
-            // Move down
+            gameController.InputKey("down");
         }
         else if (text == "d")
         {
-            // Move right
+            gameController.InputKey("right");
+        }
+        else
+        {
+            gameController.InputKey("none");
         }
         entry.Text = "";
     }
