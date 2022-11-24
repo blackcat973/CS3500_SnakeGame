@@ -1,4 +1,9 @@
-﻿using System.Collections.Generic;
+﻿/**
+ * 2022-11-23 
+ *      - Add WallDrawer method. Calculate number of walls by using Point1 and 2.
+ */
+
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using IImage = Microsoft.Maui.Graphics.IImage;
