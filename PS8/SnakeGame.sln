@@ -9,9 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vector2D", "Vector2D\Vector
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetworkController", "NetworkController\NetworkController.csproj", "{227EFD93-AD59-4543-9EEB-86AD92820B54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameController", "GameController\GameController.csproj", "{F0E77997-AFA0-4F5E-A3C0-323209F6B9A8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameController", "GameController\GameController.csproj", "{F0E77997-AFA0-4F5E-A3C0-323209F6B9A8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameWorld", "GameModel\GameWorld.csproj", "{30B566B1-8A47-4B87-80C8-21BE82625288}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameWorld", "GameModel\GameWorld.csproj", "{30B566B1-8A47-4B87-80C8-21BE82625288}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

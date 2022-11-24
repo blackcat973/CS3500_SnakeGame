@@ -1,12 +1,12 @@
 ﻿using GameSystem;
+using GameWorld;
 
 namespace SnakeGame;
-
 
 public partial class MainPage : ContentPage
 {
 
-    private GameController gameController = new();
+    private GameController gameController;
 
     public MainPage()
     {

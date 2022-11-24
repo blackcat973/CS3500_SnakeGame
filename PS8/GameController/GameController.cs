@@ -47,6 +47,10 @@ namespace GameSystem
 
         //controller => world size -> world created. ->
 
+        public World GetWorld()
+        {
+            return theWorld;
+        }
 
         public void Connect(string address, string userName)
         {

@@ -12,11 +12,9 @@ namespace GameWorld
         public int Power;
 
         [JsonProperty(PropertyName = "loc")]
-
         public Vector2D Location;
 
         [JsonProperty(PropertyName = "died")]
-
         public bool Died { get; private set; } = false;
 
         public PowerUp(int id, int x, int y)

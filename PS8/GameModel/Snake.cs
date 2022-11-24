@@ -4,7 +4,6 @@
 
 using Newtonsoft.Json;
 using SnakeGame;
-//using Vector2D;
 
 namespace GameWorld
 {
