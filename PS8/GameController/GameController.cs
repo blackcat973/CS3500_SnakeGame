@@ -22,8 +22,14 @@ namespace GameSystem
 
         private bool FirstSend = true;
 
-        private int UniqueID = 0;
-        private int WorldSize = 0;
+        private int UniqueID { get; set; } 
+
+        public int getUniqueID()
+        {
+            return this.UniqueID;
+        }
+
+        private int WorldSize = -1;
 
         public World World { get; set; }
 
@@ -42,15 +48,11 @@ namespace GameSystem
         public delegate void WorldCreated();
         public event WorldCreated? WorldCreate;
 
+        public delegate void InputAccess();
+        public event InputAccess? InputAvailiable;
+
 
         SocketState? theServer = null;
-
-        //controller => world size -> world created. ->
-
-        public World GetWorld()
-        {
-            return theWorld;
-        }
 
         public void Connect(string address, string userName)
         {
@@ -68,16 +70,19 @@ namespace GameSystem
                 return;
             }
 
-            Connected?.Invoke();
-
             theServer = state;
 
+            if(theServer is not null)
+            {
+                Networking.Send(theServer.TheSocket, UserName + "\n");
+            }
 
             //2. Upon connection, send a single '\n' terminated string representing the player's name
             //send user name to the socket
 
             // Start an event loop to receive messages from the server
             state.OnNetworkAction = ReceiveData;
+
             //at this point getting wall info
             Networking.GetData(state);
         }
@@ -108,28 +113,68 @@ namespace GameSystem
                 {
                     Wall? DeseriWall = JsonConvert.DeserializeObject<Wall>(obj.ToString());
                     //add to world.
-                    World.Walls.Add(DeseriWall.WallID, DeseriWall);
+
+                    if (World.Walls.ContainsKey(DeseriWall.WallID))
+                    {
+                        World.Walls[DeseriWall.WallID] = DeseriWall;
+                    }
+                    else
+                    {
+                        World.Walls.Add(DeseriWall.WallID, DeseriWall);
+                    }
                 }
                 //if objects' key is snake
                 else if (obj.ContainsKey("snake"))
                 {
                     Snake? DeseriSnake = JsonConvert.DeserializeObject<Snake>(obj.ToString());
                     //add snake to world
-                    World.SnakePlayers.Add(DeseriSnake.UniqueID, DeseriSnake);
 
+                    if (DeseriSnake.Disconnected)
+                    {
+                        World.SnakePlayers.Remove(DeseriSnake.UniqueID);
+                    }
+                    else
+                    {
+                        if (World.SnakePlayers.ContainsKey(DeseriSnake.UniqueID))
+                        {
+                            World.SnakePlayers[DeseriSnake.UniqueID] = DeseriSnake;
+                        }
+                        else
+                        {
+                            World.SnakePlayers.Add(DeseriSnake.UniqueID, DeseriSnake);
+                        }
+                    }
                 }
                 else if (obj.ContainsKey("power"))
                 {
                     PowerUp? DeseriPower = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
                     //add power to world
-                    World.PowerUps.Add(DeseriPower.Power, DeseriPower);
+
+                    if (DeseriPower.Died)
+                    {
+                        World.PowerUps.Remove(DeseriPower.Power);
+                    }
+                    else
+                    {
+                        if (World.PowerUps.ContainsKey(DeseriPower.Power))
+                        {
+                            World.PowerUps[DeseriPower.Power] = DeseriPower;
+                        }
+                        else
+                        {
+                            World.PowerUps.Add(DeseriPower.Power, DeseriPower);
+                        }
+                    }
                 }
             }
+            //when string s is not JSON type, it means first send. 
+            //Maybe, need to find another way to do.
             catch (Exception)
             {
                 if (FirstSend)
                 {
                     this.UniqueID = Convert.ToInt32(s);
+
                     FirstSend = false;
                 }
                 else
@@ -215,9 +260,8 @@ namespace GameSystem
                 state.RemoveData(0, p.Length);
 
                 ParsingData(p);
-                DatasArrived?.Invoke();
-
                 }
+
             //inform to view that datas are updated.
             DatasArrived?.Invoke();
 
@@ -225,19 +269,16 @@ namespace GameSystem
 
         }
 
-        public void InfoEntered(string message)
-        {
-            if(theServer is not null)
-            {
-                Networking.Send(theServer.TheSocket, message + "\n");
-            }
-        }
-
+        //
         public void InputKey(string s)
         {
-            //{ "moving":"left"}
-
-            Networking.Send(theServer.TheSocket, s);
+            //https://stackoverflow.com/questions/13489139/how-to-write-json-string-value-in-code
+            string temp = JsonConvert.SerializeObject(
+                new
+                {
+                    moving = s
+                });
+            Networking.Send(theServer.TheSocket, temp + "\n");
         }
 
 

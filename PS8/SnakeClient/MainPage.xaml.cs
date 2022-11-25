@@ -10,6 +10,7 @@ public partial class MainPage : ContentPage
 
     public MainPage()
     {
+        gameController = new GameController();
 
         InitializeComponent();
         /// Use this method as an event handler for when the controller has updated the world
@@ -22,7 +23,7 @@ public partial class MainPage : ContentPage
     private void drawingWorld()
     {
         worldPanel.SetWorld(gameController.World);
-
+        worldPanel.SetUniqueID(gameController.getUniqueID());
         OnFrame();
     }
 
@@ -91,8 +92,6 @@ public partial class MainPage : ContentPage
         //DisplayAlert("Delete this", "Code to connect to server goes here", "OK");
 
         gameController.Connect(serverText.Text, nameText.Text);
-
-        gameController.InfoEntered(nameText.Text);
 
         keyboardHack.Focus();
 

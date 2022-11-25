@@ -15,7 +15,6 @@ namespace GameWorld
         //player's name
         [JsonProperty(PropertyName = "wall")]
         public string Name { get; private set; }
-        //
         [JsonProperty(PropertyName = "body")]
         public List<Vector2D> Body;
         [JsonProperty(PropertyName = "dir")]

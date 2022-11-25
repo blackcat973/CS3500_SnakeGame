@@ -20,6 +20,7 @@ using Font = Microsoft.Maui.Graphics.Font;
 using SizeF = Microsoft.Maui.Graphics.SizeF;
 using GameWorld;
 using Microsoft.UI.Xaml.Controls;
+using System.Xml;
 
 namespace SnakeGame;
 public class WorldPanel : IDrawable
@@ -30,6 +31,7 @@ public class WorldPanel : IDrawable
 
     private int viewSize = 900;
     private World theWorld;
+    private int playerUniqueID = -1;
 
     private IImage wall;
     private IImage background;
@@ -59,21 +61,46 @@ public class WorldPanel : IDrawable
         graphicsView.HeightRequest = 900;
         graphicsView.WidthRequest = 900;
     }
-    private void DrawObjectWithTransform(ICanvas canvas, object o, double worldX, double worldY, ObjectDrawer drawer)
+
+    private void DrawObjectWithTransform(ICanvas canvas, object o, double worldX, double worldY, double dir, ObjectDrawer drawer)
     {
         // "push" the current transform
         canvas.SaveState();
 
         canvas.Translate((float)worldX, (float)worldY);
+        canvas.Rotate((float)dir);
         drawer(o, canvas);
 
         // "pop" the transform
         canvas.RestoreState();
     }
 
-    private void BackgroundDrawer(object o, ICanvas canvas)
+    private void SnakeDrawer(object o, ICanvas canvas)
     {
-        canvas.DrawImage(background, - background.Width / 2, -background.Height / 2, background.Width, background.Height);
+        Snake s = o as Snake;
+
+        int lengthOfSnake = s.Body.Count;
+
+        canvas.StrokeColor = Colors.Red;
+        canvas.StrokeSize = 6;
+        canvas.StrokeLineCap = LineCap.Round;
+
+        //canvas.DrawLine(0, 0, 0, (float)lengthOfSnake);
+
+        Vector2D temp = s.Body.Last();
+
+        for (int i = lengthOfSnake - 1; i > 0; i--)
+        {
+            float HeadX = (float)(s.Body[i].X - temp.X);
+            float HeadY = (float)(s.Body[i].Y - temp.Y);
+            float TailX = (float)(s.Body[i - 1].X - temp.X);
+            float TailY = (float)(s.Body[i - 1].Y - temp.Y);
+
+            canvas.DrawLine(HeadX, HeadY, TailX, TailY);
+
+            temp.X = HeadX;
+            temp.Y = HeadY;
+        }
     }
 
     private void WallsDrawer(object o, ICanvas canvas)
@@ -109,82 +136,10 @@ public class WorldPanel : IDrawable
             for (int i = 0; i <= numOfRow; i++)
             {
                 canvas.DrawImage(wall, (-wall.Width / 2) + (i * wall.Width), -wall.Height / 2, wall.Width, wall.Height);
-    private void DrawObjectWithTransform(ICanvas canvas, object o, double worldX, double worldY, ObjectDrawer drawer)
-    {
-        // "push" the current transform
-        canvas.SaveState();
-
-        canvas.Translate((float)worldX, (float)worldY);
-        drawer(o, canvas);
-
-        // "pop" the transform
-        canvas.RestoreState();
-    }
-
-    private void BackgroundDrawer(object o, ICanvas canvas)
-    {
-        canvas.DrawImage(background, -2000 / 2, -2000 / 2, 2000, 2000);
-    }
-
-    private void WallsDrawer(object o, ICanvas canvas)
-    {
-        Wall w = o as Wall;
-
-        double x1 = w.Point1.GetX();
-        double y1 = w.Point1.GetY();
-        double x2 = w.Point2.GetX();
-        double y2 = w.Point2.GetY();
-
-        double lengthOfWallInRow = x1 - x2;
-        double lengthOfWallInCol = y1 - y2;
-
-        int numOfRow = (int)lengthOfWallInRow / (int)wall.Width;
-        int numOfCol = (int)lengthOfWallInCol / (int)wall.Width;
-
-        if(numOfRow <0)
-            numOfRow *= -1;
-
-        if(numOfCol <0)
-            numOfCol *= -1;
-
-        if (lengthOfWallInRow > 0 && lengthOfWallInCol == 0)
-        {
-            for (int i = 0; i <= numOfRow; i++)
-            {
-                canvas.DrawImage(wall, (-wall.Width / 2) - (i*wall.Width), -wall.Height / 2, wall.Width, wall.Height);
             }
         }
-        else if (lengthOfWallInRow < 0 && lengthOfWallInCol == 0)
-        {
-            for (int i = 0; i <= numOfRow; i++)
-            {
-                canvas.DrawImage(wall, (-wall.Width / 2) + (i*wall.Width), -wall.Height / 2, wall.Width, wall.Height);
 
-            }
-        }
-        else if (lengthOfWallInCol > 0 && lengthOfWallInRow == 0)
-        {
-            for (int i = 0; i <= numOfCol; i++)
-            {
-                canvas.DrawImage(wall, (-wall.Width / 2), (-wall.Height / 2) - (i*wall.Width), wall.Width, wall.Height);
-            }
-        }
-        else if (lengthOfWallInCol < 0 && lengthOfWallInRow == 0)
-        {
-            for (int i = 0; i <= numOfCol; i++)
-            {
-                canvas.DrawImage(wall, (-wall.Width / 2), (-wall.Height / 2) + (i*wall.Width), wall.Width, wall.Height);
-            }
-        }
-    }
 
-    public void SetWorld(World w)
-    {
-        theWorld = w;
-    }
-
-            }
-        }
         else if (lengthOfWallInCol > 0 && lengthOfWallInRow == 0)
         {
             for (int i = 0; i <= numOfCol; i++)
@@ -201,9 +156,27 @@ public class WorldPanel : IDrawable
         }
     }
 
+    private void PowerUpDrawer(object o, ICanvas canvas)
+    {
+        PowerUp p = o as PowerUp;
+        float radius1 = 8;
+        float radius2 = 4;
+
+        canvas.FillColor = Colors.DarkGreen;
+        canvas.FillCircle(0, 0, radius1);
+
+        canvas.FillColor = Colors.Yellow;
+        canvas.FillCircle(0, 0, radius2);
+    }
+
     public void SetWorld(World w)
     {
         theWorld = w;
+    }
+
+    public void SetUniqueID(int id)
+    {
+        playerUniqueID = id;
     }
 
     private void InitializeDrawing()
@@ -218,17 +191,33 @@ public class WorldPanel : IDrawable
         if (!initializedForDrawing)
             InitializeDrawing();
 
-        canvas.Translate((float)viewSize / 2, (float)viewSize / 2);
+        canvas.ResetState();
 
-
-        if (theWorld.Size != null)
+        if (theWorld is not null)
         {
-            lock (theWorld)
+
+            if (theWorld.SnakePlayers.ContainsKey(playerUniqueID))
             {
-                DrawObjectWithTransform(canvas, background, 0, 0, BackgroundDrawer);
-                //Drawing walls
-                foreach (var w in theWorld.Walls.Values)
-                    DrawObjectWithTransform(canvas, w, w.Point1.GetX(), w.Point1.GetY(), WallsDrawer);
+                lock (theWorld)
+                {
+                    float playerX = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetX();
+                    float playerY = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetY();
+
+                    canvas.Translate(-playerX + (viewSize / 2), -playerY + (viewSize / 2));
+
+                    canvas.DrawImage(background, (-theWorld.Size) / 2, (-theWorld.Size) / 2, theWorld.Size, theWorld.Size);
+
+                    //Drawing walls
+                    foreach (Wall w in theWorld.Walls.Values)
+                        DrawObjectWithTransform(canvas, w, w.Point1.GetX(), w.Point1.GetY(), 0, WallsDrawer);
+
+                    // Even if snake isn't disappear after colliding wall, add if(!s.Died)
+                    foreach (Snake s in theWorld.SnakePlayers.Values)
+                        DrawObjectWithTransform(canvas, s, s.Body.First().GetX(), s.Body.First().GetY(), s.Dir.ToAngle(), SnakeDrawer);
+
+                    foreach (PowerUp p in theWorld.PowerUps.Values)
+                        DrawObjectWithTransform(canvas, p, p.Location.GetX(), p.Location.GetY(), 0, PowerUpDrawer);
+                } 
             }
         }
     }
