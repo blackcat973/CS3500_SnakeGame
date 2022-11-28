@@ -20,39 +20,20 @@ public partial class MainPage : ContentPage
         gameController = new GameController();
 
         InitializeComponent();
-        /// Use this method as an event handler for when the controller has updated the world
+
         gameController.DatasArrived += OnFrame;
 
         gameController.WorldCreate += drawingWorld;
 
         gameController.Error += NetworkErrorHandler;
-
-        DoneFrame += ResetEntry;
-
-        //gameController.WallCreate += delegate { isWallCreated = true};
-
-        //gameController.WallCreate += drawingWorld;
-
-        //gameController.InputAvailiable += OnTextChanged;
-
-        //gameController.DatasArrived += 
-
     }
 
-    private void ResetEntry()
-    {
-
-        keyboardHack.Text = "";
-
-    }
 
     private void drawingWorld()
     {
         worldPanel.SetWorld(gameController.World);
         worldPanel.SetUniqueID(gameController.World.UniqueId);
         OnFrame();
-
-
     }
 
     void OnTapped(object sender, EventArgs args)
@@ -61,35 +42,35 @@ public partial class MainPage : ContentPage
     }
 
 
-    //void OnTextChanged(object sender, TextChangedEventArgs args)
-    //{
-    //    Entry entry = (Entry)sender;
+    void OnTextChanged(object sender, TextChangedEventArgs args)
+    {
+        Entry entry = (Entry)sender;
 
+        String text = entry.Text.ToLower();
+        if (text == "w")
+        {
+            gameController.InputKey("up");
+        }
+        else if (text == "a")
+        {
+            gameController.InputKey("left");
+        }
+        else if (text == "s")
+        {
+            gameController.InputKey("down");
+        }
+        else if (text == "d")
+        {
+            gameController.InputKey("right");
+        }
+        else
+        {
+            gameController.InputKey("none");
+        }
 
+        entry.Text = "";
 
-    //    String text = entry.Text.ToLower();
-    //    if (text == "w")
-    //    {
-    //        gameController.InputKey("up");
-    //    }
-    //    else if (text == "a")
-    //    {
-    //        gameController.InputKey("left");
-    //    }
-    //    else if (text == "s")
-    //    {
-    //        gameController.InputKey("down");
-    //    }
-    //    else if (text == "d")
-    //    {
-    //        gameController.InputKey("right");
-    //    }
-    //    else
-    //    {
-    //        gameController.InputKey("none");
-    //    }
-    //    CurrentEntry.Text = "";
-    //}
+    }
 
     private void NetworkErrorHandler(string s)
     {
@@ -133,8 +114,6 @@ public partial class MainPage : ContentPage
     /// </summary>
     public void OnFrame()
     {
-        gameController.InputKey(keyboardHack.Text);
-
         Dispatcher.Dispatch(() => graphicsView.Invalidate());
     }
 

@@ -304,34 +304,10 @@ namespace GameSystem
             //The client shall not send any command requests to the server before
             //receiving its player ID, world size, and walls.
 
-            if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0))
+            if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0) || s is not null)
             {
-                if (s is not null)
-                {
-                    if (s.Equals("w"))
-                    {
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "up" }) + "\n");
-                    }
-                    else if (s.Equals("a"))
-                    {
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "left" }) + "\n");
-                    }
-                    else if (s.Equals("s"))
-                    {
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "down" }) + "\n");
-                    }
-                    else if (s.Equals("d"))
-                    {
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "right" }) + "\n");
-                    }
-                    else
-                    {
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "none" }) + "\n");
-                    } 
-                }
+                 Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
             }
         }
-
-
     }
 }

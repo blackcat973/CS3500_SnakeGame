@@ -234,7 +234,7 @@ public class WorldPanel : IDrawable
 
             if (theWorld.SnakePlayers.ContainsKey(playerUniqueID))
             {
-
+                
                 float playerX = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetX();
                 float playerY = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetY();
 
@@ -252,7 +252,7 @@ public class WorldPanel : IDrawable
                     {
                         if (s.Alive)
                             DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDrawer);
-                        else
+                        else if(s.Died)
                             DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDieDrawer);
                     }
 
