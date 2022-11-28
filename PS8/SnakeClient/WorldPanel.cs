@@ -21,6 +21,7 @@ using SizeF = Microsoft.Maui.Graphics.SizeF;
 using GameWorld;
 using Microsoft.UI.Xaml.Controls;
 using System.Xml;
+using Microsoft.Maui.Graphics;
 
 namespace SnakeGame;
 public class WorldPanel : IDrawable
@@ -32,6 +33,7 @@ public class WorldPanel : IDrawable
     private int viewSize = 900;
     private World theWorld;
     private int playerUniqueID = -1;
+    private double movingCount = 0;
 
     private IImage wall;
     private IImage background;
@@ -68,7 +70,7 @@ public class WorldPanel : IDrawable
         canvas.SaveState();
 
         canvas.Translate((float)worldX, (float)worldY);
-        canvas.Rotate((float)dir);
+        //canvas.Rotate((float)dir);
         drawer(o, canvas);
 
         // "pop" the transform
@@ -78,29 +80,61 @@ public class WorldPanel : IDrawable
     private void SnakeDrawer(object o, ICanvas canvas)
     {
         Snake s = o as Snake;
-
         int lengthOfSnake = s.Body.Count;
-
-        canvas.StrokeColor = Colors.Red;
-        canvas.StrokeSize = 6;
+        if (s.UniqueID == playerUniqueID)
+            canvas.StrokeColor = Colors.DarkBlue;
+        else
+            canvas.StrokeColor = Colors.Red;
+        canvas.StrokeSize = 10;
         canvas.StrokeLineCap = LineCap.Round;
 
-        //canvas.DrawLine(0, 0, 0, (float)lengthOfSnake);
-
+        float firstX = 0;
+        float firstY = 0;
+        float secondX = 0;
+        float secondY = 0;
         Vector2D temp = s.Body.Last();
 
-        for (int i = lengthOfSnake - 1; i > 0; i--)
+        canvas.FontColor = Colors.White;
+
+        if (s.Alive)
         {
-            float HeadX = (float)(s.Body[i].X - temp.X);
-            float HeadY = (float)(s.Body[i].Y - temp.Y);
-            float TailX = (float)(s.Body[i - 1].X - temp.X);
-            float TailY = (float)(s.Body[i - 1].Y - temp.Y);
+            movingCount = 0;
+            for (int i = lengthOfSnake - 1; i > 0; i--)
+            {
+                if (temp.X == s.Body[i - 1].X)
+                    secondY += (float)(s.Body[i - 1].Y - temp.Y);
+                else if (temp.Y == s.Body[i - 1].Y)
+                    secondX += (float)(s.Body[i - 1].X - temp.X);
 
-            canvas.DrawLine(HeadX, HeadY, TailX, TailY);
+                canvas.DrawLine(firstX, firstY, secondX, secondY);
+                //canvas.StrokeColor = Colors.WhiteSmoke;
+                //canvas.StrokeDashPattern = new float[] { 3, 3 };
+                //canvas.DrawLine(firstX, firstY, secondX, secondY);
 
-            temp.X = HeadX;
-            temp.Y = HeadY;
+                firstX = secondX;
+                firstY = secondY;
+                temp = s.Body[i - 1];
+            }
+            canvas.DrawString(s.Name + ": " + s.Score, 0, 20, HorizontalAlignment.Center);
         }
+    }
+
+    private void SnakeDieDrawer(object o, ICanvas canvas)
+    {
+        Snake s = o as Snake;
+        canvas.FillColor = Colors.WhiteSmoke;
+        float randRotate = (float)((s.Body.Last().GetX() + s.Body.Last().GetY()) % 360);
+
+        if (movingCount <= 35)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                canvas.DrawCircle((float)(0 + movingCount), 0, 4);
+                canvas.Rotate((float)randRotate * (i + 1));
+            }
+        }
+
+        movingCount += 1;
     }
 
     private void WallsDrawer(object o, ICanvas canvas)
@@ -112,11 +146,14 @@ public class WorldPanel : IDrawable
         double x2 = w.Point2.GetX();
         double y2 = w.Point2.GetY();
 
+        float width = 50;
+        float height = 50;
+
         double lengthOfWallInRow = x1 - x2;
         double lengthOfWallInCol = y1 - y2;
 
-        int numOfRow = (int)lengthOfWallInRow / (int)wall.Width;
-        int numOfCol = (int)lengthOfWallInCol / (int)wall.Width;
+        int numOfRow = (int)(lengthOfWallInRow / width);
+        int numOfCol = (int)(lengthOfWallInCol / width);
 
         if (numOfRow < 0)
             numOfRow *= -1;
@@ -128,30 +165,29 @@ public class WorldPanel : IDrawable
         {
             for (int i = 0; i <= numOfRow; i++)
             {
-                canvas.DrawImage(wall, (-wall.Width / 2) - (i * wall.Width), -wall.Height / 2, wall.Width, wall.Height);
+                canvas.DrawImage(wall, (-width / 2) - (i * width), -height / 2, width, height);
             }
         }
         else if (lengthOfWallInRow < 0 && lengthOfWallInCol == 0)
         {
             for (int i = 0; i <= numOfRow; i++)
             {
-                canvas.DrawImage(wall, (-wall.Width / 2) + (i * wall.Width), -wall.Height / 2, wall.Width, wall.Height);
+                canvas.DrawImage(wall, (-width / 2) + (i * width), -height / 2, width, height);
             }
         }
-
 
         else if (lengthOfWallInCol > 0 && lengthOfWallInRow == 0)
         {
             for (int i = 0; i <= numOfCol; i++)
             {
-                canvas.DrawImage(wall, (-wall.Width / 2), (-wall.Height / 2) - (i * wall.Width), wall.Width, wall.Height);
+                canvas.DrawImage(wall, (-width / 2), (-height / 2) - (i * height), width, height);
             }
         }
         else if (lengthOfWallInCol < 0 && lengthOfWallInRow == 0)
         {
             for (int i = 0; i <= numOfCol; i++)
             {
-                canvas.DrawImage(wall, (-wall.Width / 2), (-wall.Height / 2) + (i * wall.Width), wall.Width, wall.Height);
+                canvas.DrawImage(wall, (-width / 2), (-height / 2) + (i * height), width, height);
             }
         }
     }
@@ -198,26 +234,31 @@ public class WorldPanel : IDrawable
 
             if (theWorld.SnakePlayers.ContainsKey(playerUniqueID))
             {
+
+                float playerX = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetX();
+                float playerY = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetY();
+
+                canvas.Translate(-playerX + (viewSize / 2), -playerY + (viewSize / 2));
+
+                canvas.DrawImage(background, (-theWorld.Size) / 2, (-theWorld.Size) / 2, theWorld.Size, theWorld.Size);
                 lock (theWorld)
                 {
-                    float playerX = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetX();
-                    float playerY = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetY();
-
-                    canvas.Translate(-playerX + (viewSize / 2), -playerY + (viewSize / 2));
-
-                    canvas.DrawImage(background, (-theWorld.Size) / 2, (-theWorld.Size) / 2, theWorld.Size, theWorld.Size);
-
                     //Drawing walls
                     foreach (Wall w in theWorld.Walls.Values)
                         DrawObjectWithTransform(canvas, w, w.Point1.GetX(), w.Point1.GetY(), 0, WallsDrawer);
 
                     // Even if snake isn't disappear after colliding wall, add if(!s.Died)
                     foreach (Snake s in theWorld.SnakePlayers.Values)
-                        DrawObjectWithTransform(canvas, s, s.Body.First().GetX(), s.Body.First().GetY(), s.Dir.ToAngle(), SnakeDrawer);
+                    {
+                        if (s.Alive)
+                            DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDrawer);
+                        else
+                            DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDieDrawer);
+                    }
 
                     foreach (PowerUp p in theWorld.PowerUps.Values)
                         DrawObjectWithTransform(canvas, p, p.Location.GetX(), p.Location.GetY(), 0, PowerUpDrawer);
-                } 
+                }
             }
         }
     }

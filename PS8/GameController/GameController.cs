@@ -48,11 +48,15 @@ namespace GameSystem
         public delegate void WorldCreated();
         public event WorldCreated? WorldCreate;
 
-        public delegate void InputAccess();
+        public delegate void InputAccess(object t);
         public event InputAccess? InputAvailiable;
 
+        //public delegate void WallCreated();
+        //public event WallCreated? WallCreate;
 
-        SocketState? theServer = null;
+
+
+    SocketState? theServer = null;
 
         public void Connect(string address, string userName)
         {
@@ -102,6 +106,11 @@ namespace GameSystem
 
         private void ParsingData(string s)
         {
+            if (theServer.ErrorOccurred)
+            {
+                Error?.Invoke("Lost connection to server");
+                return;
+            }
 
             try
             {
@@ -122,10 +131,13 @@ namespace GameSystem
                     {
                         World.Walls.Add(DeseriWall.WallID, DeseriWall);
                     }
+
                 }
                 //if objects' key is snake
                 else if (obj.ContainsKey("snake"))
                 {
+                    //WallCreate.Invoke();
+
                     Snake? DeseriSnake = JsonConvert.DeserializeObject<Snake>(obj.ToString());
                     //add snake to world
 
@@ -144,9 +156,13 @@ namespace GameSystem
                             World.SnakePlayers.Add(DeseriSnake.UniqueID, DeseriSnake);
                         }
                     }
+
+                    //InputAvailiable?.Invoke();
                 }
                 else if (obj.ContainsKey("power"))
                 {
+                    //WallCreate.Invoke();
+
                     PowerUp? DeseriPower = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
                     //add power to world
 
@@ -165,6 +181,7 @@ namespace GameSystem
                             World.PowerUps.Add(DeseriPower.Power, DeseriPower);
                         }
                     }
+                    //InputAvailiable?.Invoke();
                 }
             }
             //when string s is not JSON type, it means first send. 
@@ -181,6 +198,7 @@ namespace GameSystem
                 {
                     this.WorldSize = Convert.ToInt32(s);
                     World = new World(WorldSize);
+                    World.UniqueId = this.UniqueID;
                     WorldCreate.Invoke();
                 }
             }
@@ -238,6 +256,12 @@ namespace GameSystem
 
         private void ProcessData(SocketState state)
         {
+            if (state.ErrorOccurred)
+            {
+                Error?.Invoke("Lost connection to server");
+                return;
+            }
+
             string totalData = state.GetData();
             //  3. The server will then send two strings representing integer numbers, and each
             //  terminated by a "\n". The first number is the player's unique ID.
@@ -260,10 +284,13 @@ namespace GameSystem
                 state.RemoveData(0, p.Length);
 
                 ParsingData(p);
-                }
+
+                DatasArrived?.Invoke();
+            }
 
             //inform to view that datas are updated.
-            DatasArrived?.Invoke();
+
+            state.OnNetworkAction = ProcessData;
 
             Networking.GetData(state);
 
@@ -273,12 +300,36 @@ namespace GameSystem
         public void InputKey(string s)
         {
             //https://stackoverflow.com/questions/13489139/how-to-write-json-string-value-in-code
-            string temp = JsonConvert.SerializeObject(
-                new
+    
+            //The client shall not send any command requests to the server before
+            //receiving its player ID, world size, and walls.
+
+            if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0))
+            {
+                if (s is not null)
                 {
-                    moving = s
-                });
-            Networking.Send(theServer.TheSocket, temp + "\n");
+                    if (s.Equals("w"))
+                    {
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "up" }) + "\n");
+                    }
+                    else if (s.Equals("a"))
+                    {
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "left" }) + "\n");
+                    }
+                    else if (s.Equals("s"))
+                    {
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "down" }) + "\n");
+                    }
+                    else if (s.Equals("d"))
+                    {
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "right" }) + "\n");
+                    }
+                    else
+                    {
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "none" }) + "\n");
+                    } 
+                }
+            }
         }
 
 

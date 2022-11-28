@@ -8,6 +8,13 @@ public partial class MainPage : ContentPage
 
     private GameController gameController;
 
+    public bool isWallCreated = false;
+
+    public delegate void DrawingDone();
+    public event DrawingDone? DoneFrame;
+
+    
+
     public MainPage()
     {
         gameController = new GameController();
@@ -18,13 +25,34 @@ public partial class MainPage : ContentPage
 
         gameController.WorldCreate += drawingWorld;
 
+        gameController.Error += NetworkErrorHandler;
+
+        DoneFrame += ResetEntry;
+
+        //gameController.WallCreate += delegate { isWallCreated = true};
+
+        //gameController.WallCreate += drawingWorld;
+
+        //gameController.InputAvailiable += OnTextChanged;
+
+        //gameController.DatasArrived += 
+
+    }
+
+    private void ResetEntry()
+    {
+
+        keyboardHack.Text = "";
+
     }
 
     private void drawingWorld()
     {
         worldPanel.SetWorld(gameController.World);
-        worldPanel.SetUniqueID(gameController.getUniqueID());
+        worldPanel.SetUniqueID(gameController.World.UniqueId);
         OnFrame();
+
+
     }
 
     void OnTapped(object sender, EventArgs args)
@@ -32,36 +60,40 @@ public partial class MainPage : ContentPage
         keyboardHack.Focus();
     }
 
-    void OnTextChanged(object sender, TextChangedEventArgs args)
-    {
-        Entry entry = (Entry)sender;
-        String text = entry.Text.ToLower();
-        if (text == "w")
-        {
-            gameController.InputKey("up");
-        }
-        else if (text == "a")
-        {
-            gameController.InputKey("left");
-        }
-        else if (text == "s")
-        {
-            gameController.InputKey("down");
-        }
-        else if (text == "d")
-        {
-            gameController.InputKey("right");
-        }
-        else
-        {
-            gameController.InputKey("none");
-        }
-        entry.Text = "";
-    }
 
-    private void NetworkErrorHandler()
+    //void OnTextChanged(object sender, TextChangedEventArgs args)
+    //{
+    //    Entry entry = (Entry)sender;
+
+
+
+    //    String text = entry.Text.ToLower();
+    //    if (text == "w")
+    //    {
+    //        gameController.InputKey("up");
+    //    }
+    //    else if (text == "a")
+    //    {
+    //        gameController.InputKey("left");
+    //    }
+    //    else if (text == "s")
+    //    {
+    //        gameController.InputKey("down");
+    //    }
+    //    else if (text == "d")
+    //    {
+    //        gameController.InputKey("right");
+    //    }
+    //    else
+    //    {
+    //        gameController.InputKey("none");
+    //    }
+    //    CurrentEntry.Text = "";
+    //}
+
+    private void NetworkErrorHandler(string s)
     {
-        DisplayAlert("Error", "Disconnected from server", "OK");
+        DisplayAlert("Error", s + ". Please try again. ", "OK");
     }
 
 
@@ -94,8 +126,6 @@ public partial class MainPage : ContentPage
         gameController.Connect(serverText.Text, nameText.Text);
 
         keyboardHack.Focus();
-
-
     }
 
     /// <summary>
@@ -103,7 +133,9 @@ public partial class MainPage : ContentPage
     /// </summary>
     public void OnFrame()
     {
-        Dispatcher.Dispatch( () => graphicsView.Invalidate() );
+        gameController.InputKey(keyboardHack.Text);
+
+        Dispatcher.Dispatch(() => graphicsView.Invalidate());
     }
 
     private void ControlsButton_Clicked(object sender, EventArgs e)
