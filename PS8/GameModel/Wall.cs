@@ -23,7 +23,5 @@ namespace GameWorld
             Point1 = new Vector2D(x, y);
             Point2 = new Vector2D(x, y);
         }
-
-
     }
 }

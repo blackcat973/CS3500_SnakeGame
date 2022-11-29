@@ -36,9 +36,6 @@ namespace GameSystem
         public delegate void DataHandler();
         public event DataHandler? DatasArrived;
 
-        public delegate void ConnectedHandler();
-        public event ConnectedHandler? Connected;
-
         public delegate void ErrorHandler(string error);
         public event ErrorHandler? Error;
 
@@ -98,10 +95,51 @@ namespace GameSystem
                 Error?.Invoke("Lost connection to server");
                 return;
             }
-
-            ProcessData(state);
-
+            lock (state)
+            {
+                ProcessData(state);
+            }
             Networking.GetData(state);
+        }
+
+        private void ProcessData(SocketState state)
+        {
+            if (state.ErrorOccurred)
+            {
+                Error?.Invoke("Lost connection to server");
+                return;
+            }
+
+            string totalData = state.GetData();
+            //  3. The server will then send two strings representing integer numbers, and each
+            //  terminated by a "\n". The first number is the player's unique ID.
+            //  The second is the size of the world, representing both the width
+            //  the width and height. All game worlds are square.
+
+            string[] parts = Regex.Split(totalData, @"(?<=[\n])");
+
+            foreach (string p in parts)
+            {
+                // Ignore empty strings added by the regex splitter
+                if (p.Length == 0)
+                    continue;
+                // The regex splitter will include the last string even
+                // if it doesn't end with a '\n',
+                // So we need to ignore it if this happens.
+                if (p[p.Length - 1] != '\n')
+                    break;
+                // Then remove it from the SocketState's growable buffer
+                state.RemoveData(0, p.Length);
+
+                ParsingData(p);
+
+            }
+            DatasArrived?.Invoke();
+            //inform to view that datas are updated.
+
+            //state.OnNetworkAction = ProcessData;
+
+            //Networking.GetData(state);
         }
 
         private void ParsingData(string s)
@@ -198,8 +236,7 @@ namespace GameSystem
                 {
                     this.WorldSize = Convert.ToInt32(s);
                     World = new World(WorldSize);
-                    World.UniqueId = this.UniqueID;
-                    WorldCreate.Invoke();
+                    WorldCreate?.Invoke();
                 }
             }
 
@@ -251,48 +288,6 @@ namespace GameSystem
             //        }
             //    }
             //}
-
-        }
-
-        private void ProcessData(SocketState state)
-        {
-            if (state.ErrorOccurred)
-            {
-                Error?.Invoke("Lost connection to server");
-                return;
-            }
-
-            string totalData = state.GetData();
-            //  3. The server will then send two strings representing integer numbers, and each
-            //  terminated by a "\n". The first number is the player's unique ID.
-            //  The second is the size of the world, representing both the width
-            //  the width and height. All game worlds are square.
-
-            string[] parts = Regex.Split(totalData, @"(?<=[\n])");
-
-            foreach (string p in parts)
-                {
-                    // Ignore empty strings added by the regex splitter
-                    if (p.Length == 0)
-                        continue;
-                    // The regex splitter will include the last string even
-                    // if it doesn't end with a '\n',
-                    // So we need to ignore it if this happens.
-                    if (p[p.Length - 1] != '\n')
-                        break;
-                    // Then remove it from the SocketState's growable buffer
-                state.RemoveData(0, p.Length);
-
-                ParsingData(p);
-
-                DatasArrived?.Invoke();
-            }
-
-            //inform to view that datas are updated.
-
-            state.OnNetworkAction = ProcessData;
-
-            Networking.GetData(state);
 
         }
 

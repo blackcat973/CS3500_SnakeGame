@@ -300,17 +300,18 @@ public static class Networking
 
                 }
                 ///  (2) Call the saved delegate (OnNetworkAction) allowing the user to deal with this data.
-                state.OnNetworkAction(state);
             }
             //https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.endreceive?view=net-7.0
         }
         catch (Exception e)
         {
-
+            // Error does happen here
             state.ErrorOccurred = true;
             state.ErrorMessage = e.ToString();
         }
+        state.OnNetworkAction(state);
     }
+
     /// <summary>
     /// Begin the asynchronous process of sending data via BeginSend, using SendCallback to finalize the send process.
     ///
@@ -341,6 +342,7 @@ public static class Networking
             catch
             {
                 /// If the socket is closed, does not attempt to send.
+                socket.Shutdown(SocketShutdown.Both);
                 socket.Close();
                 return false;
             }
@@ -404,6 +406,7 @@ public static class Networking
             catch
             {
                 /// If the socket is closed, does not attempt to send.
+                socket.Shutdown(SocketShutdown.Both);
                 socket.Close();
                 return false;
             }

@@ -8,12 +8,7 @@ public partial class MainPage : ContentPage
 
     private GameController gameController;
 
-    public bool isWallCreated = false;
-
-    public delegate void DrawingDone();
-    public event DrawingDone? DoneFrame;
-
-    
+    public bool isWallCreated = false;    
 
     public MainPage()
     {
@@ -27,12 +22,10 @@ public partial class MainPage : ContentPage
 
         gameController.Error += NetworkErrorHandler;
     }
-
-
     private void drawingWorld()
     {
         worldPanel.SetWorld(gameController.World);
-        worldPanel.SetUniqueID(gameController.World.UniqueId);
+        worldPanel.SetUniqueID(gameController.getUniqueID());
         OnFrame();
     }
 
@@ -74,7 +67,7 @@ public partial class MainPage : ContentPage
 
     private void NetworkErrorHandler(string s)
     {
-        DisplayAlert("Error", s + ". Please try again. ", "OK");
+        Dispatcher.Dispatch(() => DisplayAlert("Error", s + ". Please try again. ", "OK"));
     }
 
 
