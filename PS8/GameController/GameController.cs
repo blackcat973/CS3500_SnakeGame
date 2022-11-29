@@ -16,7 +16,7 @@ namespace GameSystem
         /// </summary>
 
         //Input user name.
-        private string UserName { get; set; }
+        private string? UserName { get; set; }
         // we need to handle the JSON file in here.
         //  We will get Wall, Snake info from the server.
 
@@ -51,9 +51,7 @@ namespace GameSystem
         //public delegate void WallCreated();
         //public event WallCreated? WallCreate;
 
-
-
-    SocketState? theServer = null;
+        SocketState? theServer = null;
 
         public void Connect(string address, string userName)
         {
