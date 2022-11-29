@@ -1,4 +1,7 @@
-﻿using System;
+﻿/**
+ * This code is from GameLab\Models\World.cs, just for simple code
+ */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

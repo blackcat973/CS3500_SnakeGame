@@ -1,8 +1,20 @@
-﻿using GameWorld;
+﻿/**
+ * This class is for Controller of MVC.
+ * This controls every data needed to be updated and connection between Server and the Client.
+ * When server sends data to the controller, controller class updates information for View through Handler Delegate.
+ * Also, when CLient inputs direction information, controller get this information and send it to the server,
+ * and then get data again from the server, and update View.
+ */
+
+using GameWorld;
 using NetworkUtil;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
+using System.Net.NetworkInformation;
+using static System.Net.WebRequestMethods;
+using System;
+
 
 namespace GameSystem
 {
@@ -19,11 +31,13 @@ namespace GameSystem
         private string? UserName { get; set; }
         // we need to handle the JSON file in here.
         //  We will get Wall, Snake info from the server.
-
+        
+        // This is for getting information of unique ID and world size.
         private bool FirstSend = true;
 
-        private int UniqueID { get; set; } 
+        private int UniqueID { get; set; }
 
+        // getter
         public int getUniqueID()
         {
             return this.UniqueID;
@@ -31,36 +45,54 @@ namespace GameSystem
 
         private int WorldSize = -1;
 
-        public World World { get; set; }
+        // World object variable
+        public World? World { get; set; }
 
+        /// <summary>
+        /// A delegate and event to fire when the controller has received and processed new info from the server
+        /// </summary>
         public delegate void DataHandler();
         public event DataHandler? DatasArrived;
 
+        /// <summary>
+        /// A delegate and event to fire when the controller has error and display alert about error.
+        /// </summary>
+        /// <param name="error"></param>
         public delegate void ErrorHandler(string error);
         public event ErrorHandler? Error;
 
-        public delegate void GameUpdateHandler();
-        public event GameUpdateHandler? GameUpdate;
+        /// <summary>
+        /// A delegate and event to fire when the controller has error and display alert about error.
+        /// </summary>
+        public delegate void ConnectedHandler();
+        public event ConnectedHandler? Connected;
 
+        /// <summary>
+        /// A delegate and event to fire when the controller makes the game world and to initialize the world.
+        /// </summary>
         public delegate void WorldCreated();
         public event WorldCreated? WorldCreate;
 
-        public delegate void InputAccess(object t);
-        public event InputAccess? InputAvailiable;
+        // Server Object Variable
+        private SocketState? theServer;
 
-        //public delegate void WallCreated();
-        //public event WallCreated? WallCreate;
-
-        SocketState? theServer = null;
-
+        /// <summary>
+        /// Begins the process of connecting to the server
+        /// </summary>
+        /// <param name="address"> The address where client wants to connect </param>
+        /// <param name="userName"> Client ID in the game </param>
         public void Connect(string address, string userName)
         {
             // 1. Establish a socket connection to the server on port 11000.
             Networking.ConnectToServer(OnConnect, address, 11000);
-
+            // Set the username from what user inputs.
             this.UserName = userName;
         }
 
+        /// <summary>
+        /// Method to be invoked by the networking library when a connection is made
+        /// </summary>
+        /// <param name="state"> Server socketstate </param>
         private void OnConnect(SocketState state)
         {
             if (state.ErrorOccurred)
@@ -68,24 +100,32 @@ namespace GameSystem
                 Error?.Invoke("Error connecting to server");
                 return;
             }
-
+            // Initialize socket state variable in the gamecontroller class.
             theServer = state;
 
-            if(theServer is not null)
+            if (theServer is not null)
             {
+                // Send username information to the server
                 Networking.Send(theServer.TheSocket, UserName + "\n");
             }
 
             //2. Upon connection, send a single '\n' terminated string representing the player's name
             //send user name to the socket
+            Connected?.Invoke();
 
             // Start an event loop to receive messages from the server
-            state.OnNetworkAction = ReceiveData;
+            if(theServer is not null)
+                theServer.OnNetworkAction = ReceiveData;
 
             //at this point getting wall info
             Networking.GetData(state);
+
         }
 
+        /// <summary>
+        /// Method to be invoked by the networking library when data is available        
+        /// /// </summary>
+        /// <param name="state"> Server socketstate </param>
         private void ReceiveData(SocketState state)
         {
             if (state.ErrorOccurred)
@@ -93,13 +133,20 @@ namespace GameSystem
                 Error?.Invoke("Lost connection to server");
                 return;
             }
+            // Lock the state for receving data safely. Try not to make race condition.
             lock (state)
             {
                 ProcessData(state);
             }
+            // Get new data from server.
             Networking.GetData(state);
         }
 
+        /// <summary>
+        /// Process any buffered data separated by '\n'
+        /// and send buffered data to ParsingData method
+        /// </summary>
+        /// <param name="state"> Server socketstate </param>
         private void ProcessData(SocketState state)
         {
             if (state.ErrorOccurred)
@@ -132,174 +179,136 @@ namespace GameSystem
                 ParsingData(p);
 
             }
-            DatasArrived?.Invoke();
             //inform to view that datas are updated.
-
-            //state.OnNetworkAction = ProcessData;
-
-            //Networking.GetData(state);
+            DatasArrived?.Invoke();
         }
 
+        /// <summary>
+        /// This method is an actual method that parses every data in the world.
+        /// Deserialize JSON file, and store in a Dictionary that matches each key values.
+        /// </summary>
+        /// <param name="s"> JSON file data </param>
         private void ParsingData(string s)
         {
-            if (theServer.ErrorOccurred)
+            if (theServer is not null)
             {
-                Error?.Invoke("Lost connection to server");
+                if (theServer.ErrorOccurred)
+                {
+                    Error?.Invoke("Lost connection to server");
+                    return;
+                }
+
+                try
+                {
+                    //Convert String to JObject 
+                    JObject obj = JObject.Parse(s);
+
+                    //If objects' key is wall
+                    if (obj.ContainsKey("wall"))
+                    {
+                        //add wall to the World class.
+                        Wall? DeseriWall = JsonConvert.DeserializeObject<Wall>(obj.ToString());
+
+                        if (DeseriWall is not null && World is not null)
+                        {
+                            // Store Wall information
+                            if (World.Walls.ContainsKey(DeseriWall.WallID))
+                            {
+                                World.Walls[DeseriWall.WallID] = DeseriWall;
+                            }
+                            else
+                            {
+                                World.Walls.Add(DeseriWall.WallID, DeseriWall);
+                            }
+                        }
+
+                    }
+                    //if objects' key is snake
+                    else if (obj.ContainsKey("snake"))
+                    {
+                        //add snake to world
+                        Snake? DeseriSnake = JsonConvert.DeserializeObject<Snake>(obj.ToString());
+
+                        if (DeseriSnake is not null && World is not null)
+                        {
+                            // Store snake to the World class.
+                            if (DeseriSnake.Disconnected)
+                            {
+                                World.SnakePlayers.Remove(DeseriSnake.UniqueID);
+                            }
+                            else
+                            {
+                                if (World.SnakePlayers.ContainsKey(DeseriSnake.UniqueID))
+                                {
+                                    World.SnakePlayers[DeseriSnake.UniqueID] = DeseriSnake;
+                                }
+                                else
+                                {
+                                    World.SnakePlayers.Add(DeseriSnake.UniqueID, DeseriSnake);
+                                }
+                            }
+                        }
+                    }
+                    else if (obj.ContainsKey("power"))
+                    {
+                        //add power to the World class.
+                        PowerUp? DeseriPower = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
+
+                        if (DeseriPower is not null && World is not null)
+                        {
+                            if (DeseriPower.Died)
+                            {
+                                World.PowerUps.Remove(DeseriPower.Power);
+                            }
+                            else
+                            {
+                                if (World.PowerUps.ContainsKey(DeseriPower.Power))
+                                {
+                                    World.PowerUps[DeseriPower.Power] = DeseriPower;
+                                }
+                                else
+                                {
+                                    World.PowerUps.Add(DeseriPower.Power, DeseriPower);
+                                }
+                            }
+                        }
+                    }
+                }
+                //when string s is not JSON type, it means first send. 
+                //Maybe, need to find another way to do.
+                catch (Exception)
+                {
+                    if (FirstSend)
+                    {
+                        this.UniqueID = Convert.ToInt32(s);
+
+                        FirstSend = false;
+                    }
+                    else
+                    {
+                        this.WorldSize = Convert.ToInt32(s);
+                        World = new World(WorldSize);
+                        WorldCreate?.Invoke();
+                    }
+                }
+            }
+            else
                 return;
-            }
-
-            try
-            {
-                //Convert String to JObject 
-                JObject obj = JObject.Parse(s);
-
-                //If objects' key is wall
-                if (obj.ContainsKey("wall"))
-                {
-                    Wall? DeseriWall = JsonConvert.DeserializeObject<Wall>(obj.ToString());
-                    //add to world.
-
-                    if (World.Walls.ContainsKey(DeseriWall.WallID))
-                    {
-                        World.Walls[DeseriWall.WallID] = DeseriWall;
-                    }
-                    else
-                    {
-                        World.Walls.Add(DeseriWall.WallID, DeseriWall);
-                    }
-
-                }
-                //if objects' key is snake
-                else if (obj.ContainsKey("snake"))
-                {
-                    //WallCreate.Invoke();
-
-                    Snake? DeseriSnake = JsonConvert.DeserializeObject<Snake>(obj.ToString());
-                    //add snake to world
-
-                    if (DeseriSnake.Disconnected)
-                    {
-                        World.SnakePlayers.Remove(DeseriSnake.UniqueID);
-                    }
-                    else
-                    {
-                        if (World.SnakePlayers.ContainsKey(DeseriSnake.UniqueID))
-                        {
-                            World.SnakePlayers[DeseriSnake.UniqueID] = DeseriSnake;
-                        }
-                        else
-                        {
-                            World.SnakePlayers.Add(DeseriSnake.UniqueID, DeseriSnake);
-                        }
-                    }
-
-                    //InputAvailiable?.Invoke();
-                }
-                else if (obj.ContainsKey("power"))
-                {
-                    //WallCreate.Invoke();
-
-                    PowerUp? DeseriPower = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
-                    //add power to world
-
-                    if (DeseriPower.Died)
-                    {
-                        World.PowerUps.Remove(DeseriPower.Power);
-                    }
-                    else
-                    {
-                        if (World.PowerUps.ContainsKey(DeseriPower.Power))
-                        {
-                            World.PowerUps[DeseriPower.Power] = DeseriPower;
-                        }
-                        else
-                        {
-                            World.PowerUps.Add(DeseriPower.Power, DeseriPower);
-                        }
-                    }
-                    //InputAvailiable?.Invoke();
-                }
-            }
-            //when string s is not JSON type, it means first send. 
-            //Maybe, need to find another way to do.
-            catch (Exception)
-            {
-                if (FirstSend)
-                {
-                    this.UniqueID = Convert.ToInt32(s);
-
-                    FirstSend = false;
-                }
-                else
-                {
-                    this.WorldSize = Convert.ToInt32(s);
-                    World = new World(WorldSize);
-                    WorldCreate?.Invoke();
-                }
-            }
-
-            //lock (this)
-            //{
-            //    if (FirstSend)
-            //    {
-            //        First is the player's unique ID.
-            //        this.UniqueID = Int32.Parse(parts[0]);
-            //        Second is the size of the world.
-
-            //        this.World = new World(this.WorldSize = Int32.Parse(parts[1]));
-
-
-
-            //        infrom the view
-            //        FirstSend = false;
-            //        change the eventloop starting point.
-            //        state.OnNetworkAction = ProcessData;
-            //    }
-            //    else if (!FirstSend)
-            //    {
-            //        At any time after receiving its ID < the world size, and the walls, the client can send a command
-            //        Request to the server.
-            //        The client shall not send any command requests to the server before receving its player ID<world, size, and walls,
-            //        Well-behaved client should not send more than one command request object per frame.
-
-
-            //        JObject obj = new();
-
-            //        foreach (string p in parts)
-            //        {
-            //            parsing.
-            //            obj = JObject.Parse(p);
-
-            //            if (obj.ContainsKey("wall"))
-            //            {
-            //                Walls? walls = JsonConvert.DeserializeObject<Walls>(obj.ToString());
-            //                now client can begin sending control commands,
-            //            }
-            //            else if (obj.ContainsKey("snake"))
-            //            {
-            //                Snake? walls = JsonConvert.DeserializeObject<Snake>(obj.ToString());
-            //            }
-            //            else if (obj.ContainsKey("power"))
-            //            {
-            //                PowerUp? walls = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
-            //            }
-            //        }
-            //    }
-            //}
-
         }
 
-        //
+        /// <summary>
+        /// Sending input data from user to the server.
+        /// </summary>
+        /// <param name="s"></param>
         public void InputKey(string s)
         {
             //https://stackoverflow.com/questions/13489139/how-to-write-json-string-value-in-code
-    
             //The client shall not send any command requests to the server before
             //receiving its player ID, world size, and walls.
-
             if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0) || s is not null)
             {
-                 Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
+                if(theServer is not null)
+                    Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
             }
         }
     }
