@@ -21,7 +21,7 @@ We drew canvas using the DrawObjectWithTransform method as much as possible. Thi
 You can see that we used foreach with ‘ToList()’ for drawing objects. This is because even though we lock the state to get every data of the world, if Enumerator was modified, it threw exception, called ‘System.InvalidOperationException’, because it was modified. For this reason, we added .ToList() and we can avoid the Exception. The specific information of the exception is below.
 
 '''
-System.InvalidOperationException: 'Collection was modified; enumeration operation may not execute.
+System.InvalidOperationException: Collection was modified; enumeration operation may not execute.
 '''
 
 -	GraphicView: First, the center of the graphicView, which is the screen that the user actually watches, is the coordinate of the snake’s head. Through this, we can make the screen move to match where the snake is going. By drawing the background according to the world coordinates, the world did not be drag along even if the graphicView moved.
