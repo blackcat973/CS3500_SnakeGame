@@ -13,7 +13,7 @@ namespace GameWorld
         [JsonProperty(PropertyName = "snake")]
         public int UniqueID { get; private set; }
         //player's name
-        [JsonProperty(PropertyName = "wall")]
+        [JsonProperty(PropertyName = "name")]
         public string Name { get; private set; }
         [JsonProperty(PropertyName = "body")]
         public List<Vector2D> Body;

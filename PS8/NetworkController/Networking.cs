@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
+
 namespace NetworkUtil;
 
 public static class Networking
@@ -300,7 +301,6 @@ public static class Networking
 
                 }
                 ///  (2) Call the saved delegate (OnNetworkAction) allowing the user to deal with this data.
-                state.OnNetworkAction(state);
             }
             //https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.endreceive?view=net-7.0
         }
@@ -310,6 +310,7 @@ public static class Networking
             state.ErrorOccurred = true;
             state.ErrorMessage = e.ToString();
         }
+        state.OnNetworkAction(state);
     }
     /// <summary>
     /// Begin the asynchronous process of sending data via BeginSend, using SendCallback to finalize the send process.

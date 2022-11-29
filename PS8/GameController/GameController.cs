@@ -3,6 +3,10 @@ using NetworkUtil;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
+using System.Net.NetworkInformation;
+using static System.Net.WebRequestMethods;
+using System;
+
 
 namespace GameSystem
 {
@@ -20,9 +24,12 @@ namespace GameSystem
         // we need to handle the JSON file in here.
         //  We will get Wall, Snake info from the server.
 
+        private static System.Timers.Timer aTimer;
+
+
         private bool FirstSend = true;
 
-        private int UniqueID { get; set; } 
+        private int UniqueID { get; set; }
 
         public int getUniqueID()
         {
@@ -56,7 +63,21 @@ namespace GameSystem
 
 
 
-    SocketState? theServer = null;
+        SocketState? theServer = null;
+
+        public bool IsConnected()
+        {
+
+            if (theServer.ErrorOccurred)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
 
         public void Connect(string address, string userName)
         {
@@ -76,39 +97,97 @@ namespace GameSystem
 
             theServer = state;
 
-            if(theServer is not null)
+            if (theServer is not null)
             {
                 Networking.Send(theServer.TheSocket, UserName + "\n");
             }
+
+            Connected?.Invoke();
+
 
             //2. Upon connection, send a single '\n' terminated string representing the player's name
             //send user name to the socket
 
             // Start an event loop to receive messages from the server
-            state.OnNetworkAction = ReceiveData;
+            theServer.OnNetworkAction = ReceiveData;
 
             //at this point getting wall info
-            Networking.GetData(state);
+            Networking.GetData(theServer);
+        }
+
+        public void CheckServerStatus()
+        {
+
+            if (theServer.ErrorOccurred)
+            {
+                Error?.Invoke("ERRRRR");
+                return;
+            }
         }
 
         private void ReceiveData(SocketState state)
+        {
+            if (state.ErrorOccurred || theServer.ErrorOccurred)
+            {
+                Error?.Invoke("Lost connection to server");
+                return;
+            }
+            lock (state)
+            {
+                ProcessData(state);
+            }
+            Networking.GetData(state);
+
+        }
+
+        private void ProcessData(SocketState state)
         {
             if (state.ErrorOccurred)
             {
                 Error?.Invoke("Lost connection to server");
                 return;
             }
+            string totalData = "";
+            if (!state.ErrorOccurred)
+            {
 
-            ProcessData(state);
+                totalData = state.GetData();
+            }
+            else
+            {
+                Error?.Invoke("getdata state");
+            }
+            //  3. The server will then send two strings representing integer numbers, and each
+            //  terminated by a "\n". The first number is the player's unique ID.
+            //  The second is the size of the world, representing both the width
+            //  the width and height. All game worlds are square.
 
-            Networking.GetData(state);
+            string[] parts = Regex.Split(totalData, @"(?<=[\n])");
+
+            foreach (string p in parts)
+            {
+                // Ignore empty strings added by the regex splitter
+                if (p.Length == 0)
+                    continue;
+                // The regex splitter will include the last string even
+                // if it doesn't end with a '\n',
+                // So we need to ignore it if this happens.
+                if (p[p.Length - 1] != '\n')
+                    break;
+                // Then remove it from the SocketState's growable buffer
+                state.RemoveData(0, p.Length);
+
+                ParsingData(p);
+            }
+            DatasArrived?.Invoke();
         }
 
         private void ParsingData(string s)
         {
+
             if (theServer.ErrorOccurred)
             {
-                Error?.Invoke("Lost connection to server");
+                Error?.Invoke("error");
                 return;
             }
 
@@ -198,115 +277,26 @@ namespace GameSystem
                 {
                     this.WorldSize = Convert.ToInt32(s);
                     World = new World(WorldSize);
-                    World.UniqueId = this.UniqueID;
-                    WorldCreate.Invoke();
+                    WorldCreate?.Invoke();
                 }
             }
-
-            //lock (this)
-            //{
-            //    if (FirstSend)
-            //    {
-            //        First is the player's unique ID.
-            //        this.UniqueID = Int32.Parse(parts[0]);
-            //        Second is the size of the world.
-
-            //        this.World = new World(this.WorldSize = Int32.Parse(parts[1]));
-
-
-
-            //        infrom the view
-            //        FirstSend = false;
-            //        change the eventloop starting point.
-            //        state.OnNetworkAction = ProcessData;
-            //    }
-            //    else if (!FirstSend)
-            //    {
-            //        At any time after receiving its ID < the world size, and the walls, the client can send a command
-            //        Request to the server.
-            //        The client shall not send any command requests to the server before receving its player ID<world, size, and walls,
-            //        Well-behaved client should not send more than one command request object per frame.
-
-
-            //        JObject obj = new();
-
-            //        foreach (string p in parts)
-            //        {
-            //            parsing.
-            //            obj = JObject.Parse(p);
-
-            //            if (obj.ContainsKey("wall"))
-            //            {
-            //                Walls? walls = JsonConvert.DeserializeObject<Walls>(obj.ToString());
-            //                now client can begin sending control commands,
-            //            }
-            //            else if (obj.ContainsKey("snake"))
-            //            {
-            //                Snake? walls = JsonConvert.DeserializeObject<Snake>(obj.ToString());
-            //            }
-            //            else if (obj.ContainsKey("power"))
-            //            {
-            //                PowerUp? walls = JsonConvert.DeserializeObject<PowerUp>(obj.ToString());
-            //            }
-            //        }
-            //    }
-            //}
-
-        }
-
-        private void ProcessData(SocketState state)
-        {
-            if (state.ErrorOccurred)
-            {
-                Error?.Invoke("Lost connection to server");
-                return;
-            }
-
-            string totalData = state.GetData();
-            //  3. The server will then send two strings representing integer numbers, and each
-            //  terminated by a "\n". The first number is the player's unique ID.
-            //  The second is the size of the world, representing both the width
-            //  the width and height. All game worlds are square.
-
-            string[] parts = Regex.Split(totalData, @"(?<=[\n])");
-
-            foreach (string p in parts)
-                {
-                    // Ignore empty strings added by the regex splitter
-                    if (p.Length == 0)
-                        continue;
-                    // The regex splitter will include the last string even
-                    // if it doesn't end with a '\n',
-                    // So we need to ignore it if this happens.
-                    if (p[p.Length - 1] != '\n')
-                        break;
-                    // Then remove it from the SocketState's growable buffer
-                state.RemoveData(0, p.Length);
-
-                ParsingData(p);
-
-                DatasArrived?.Invoke();
-            }
-
-            //inform to view that datas are updated.
-
-            state.OnNetworkAction = ProcessData;
-
-            Networking.GetData(state);
-
         }
 
         //
         public void InputKey(string s)
         {
             //https://stackoverflow.com/questions/13489139/how-to-write-json-string-value-in-code
-    
             //The client shall not send any command requests to the server before
             //receiving its player ID, world size, and walls.
 
-            if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0) || s is not null)
+            if (theServer.ErrorOccurred)
             {
-                 Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
+                Error?.Invoke("Lost connection.");
+                return;
+            }
+            else if (World is not null && (World.SnakePlayers.Count > 0 || World.PowerUps.Count > 0) && s is not null)
+            {
+                Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
             }
         }
     }

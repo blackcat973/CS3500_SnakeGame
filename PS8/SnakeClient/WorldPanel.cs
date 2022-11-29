@@ -33,12 +33,12 @@ public class WorldPanel : IDrawable
     private int viewSize = 900;
     private World theWorld;
     private int playerUniqueID = -1;
-    private double movingCount = 0;
 
     private IImage wall;
     private IImage background;
 
     private bool initializedForDrawing = false;
+    private bool isSnakeDied = false;
 
 #if MACCATALYST
     private IImage loadImage(string name)
@@ -80,25 +80,51 @@ public class WorldPanel : IDrawable
     private void SnakeDrawer(object o, ICanvas canvas)
     {
         Snake s = o as Snake;
-        int lengthOfSnake = s.Body.Count;
-        if (s.UniqueID == playerUniqueID)
-            canvas.StrokeColor = Colors.DarkBlue;
-        else
-            canvas.StrokeColor = Colors.Red;
-        canvas.StrokeSize = 10;
-        canvas.StrokeLineCap = LineCap.Round;
 
-        float firstX = 0;
-        float firstY = 0;
-        float secondX = 0;
-        float secondY = 0;
-        Vector2D temp = s.Body.Last();
-
-        canvas.FontColor = Colors.White;
-
-        if (s.Alive)
+        if (!isSnakeDied)
         {
-            movingCount = 0;
+            int lengthOfSnake = s.Body.Count;
+
+            switch (s.UniqueID % 8)
+            {
+                case 0:
+                    canvas.StrokeColor = Colors.DarkRed;
+                    break;
+                case 1:
+                    canvas.StrokeColor = Colors.DarkGreen;
+                    break;
+                case 2:
+                    canvas.StrokeColor = Colors.Yellow;
+                    break;
+                case 3:
+                    canvas.StrokeColor = Colors.Black;
+                    break;
+                case 4:
+                    canvas.StrokeColor = Colors.DarkOrange;
+                    break;
+                case 5:
+                    canvas.StrokeColor = Colors.Blue;
+                    break;
+                case 6:
+                    canvas.StrokeColor = Colors.Brown;
+                    break;
+                case 7:
+                    canvas.StrokeColor = Colors.AliceBlue;
+                    break;
+            }
+
+            canvas.StrokeSize = 10;
+            canvas.StrokeLineCap = LineCap.Round;
+
+
+            float firstX = 0;
+            float firstY = 0;
+            float secondX = 0;
+            float secondY = 0;
+            Vector2D temp = s.Body.Last();
+
+            canvas.FontColor = Colors.White;
+
             for (int i = lengthOfSnake - 1; i > 0; i--)
             {
                 if (temp.X == s.Body[i - 1].X)
@@ -107,9 +133,6 @@ public class WorldPanel : IDrawable
                     secondX += (float)(s.Body[i - 1].X - temp.X);
 
                 canvas.DrawLine(firstX, firstY, secondX, secondY);
-                //canvas.StrokeColor = Colors.WhiteSmoke;
-                //canvas.StrokeDashPattern = new float[] { 3, 3 };
-                //canvas.DrawLine(firstX, firstY, secondX, secondY);
 
                 firstX = secondX;
                 firstY = secondY;
@@ -117,25 +140,31 @@ public class WorldPanel : IDrawable
             }
             canvas.DrawString(s.Name + ": " + s.Score, 0, 20, HorizontalAlignment.Center);
         }
-    }
-
-    private void SnakeDieDrawer(object o, ICanvas canvas)
-    {
-        Snake s = o as Snake;
-        canvas.FillColor = Colors.WhiteSmoke;
-        float randRotate = (float)((s.Body.Last().GetX() + s.Body.Last().GetY()) % 360);
-
-        if (movingCount <= 35)
+        else
         {
-            for (int i = 0; i < 8; i++)
+            Random rand = new Random();
+            int explosionValueX = rand.Next(20);
+            int explosionValueY = rand.Next(20);
+            float randRotate = rand.Next(360);
+
+            canvas.FillColor = Colors.WhiteSmoke;
+
+            for (int i = 0; i < 3; i++)
             {
-                canvas.DrawCircle((float)(0 + movingCount), 0, 4);
-                canvas.Rotate((float)randRotate * (i + 1));
+                canvas.FillCircle((float)(0 + explosionValueX), (float)(0 + explosionValueY), 4);
+                canvas.Rotate((float)randRotate);
             }
         }
 
-        movingCount += 1;
+        canvas.Rotate((float)s.Dir.ToAngle());
+        canvas.FillColor = Colors.White;
+        canvas.FillCircle(5, 1, 3);
+        canvas.FillCircle(-5, 1, 3);
+        canvas.FillColor = Colors.Black;
+        canvas.FillCircle(5, 0, 2);
+        canvas.FillCircle(-5, 0, 2);
     }
+
 
     private void WallsDrawer(object o, ICanvas canvas)
     {
@@ -234,29 +263,32 @@ public class WorldPanel : IDrawable
 
             if (theWorld.SnakePlayers.ContainsKey(playerUniqueID))
             {
-                
+
                 float playerX = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetX();
                 float playerY = (float)theWorld.SnakePlayers[playerUniqueID].Body.Last().GetY();
 
                 canvas.Translate(-playerX + (viewSize / 2), -playerY + (viewSize / 2));
 
                 canvas.DrawImage(background, (-theWorld.Size) / 2, (-theWorld.Size) / 2, theWorld.Size, theWorld.Size);
+
                 lock (theWorld)
                 {
                     //Drawing walls
-                    foreach (Wall w in theWorld.Walls.Values)
+                    foreach (Wall w in theWorld.Walls.Values.ToList())
                         DrawObjectWithTransform(canvas, w, w.Point1.GetX(), w.Point1.GetY(), 0, WallsDrawer);
 
                     // Even if snake isn't disappear after colliding wall, add if(!s.Died)
-                    foreach (Snake s in theWorld.SnakePlayers.Values)
+                    foreach (Snake s in theWorld.SnakePlayers.Values.ToList())
                     {
-                        if (s.Alive)
-                            DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDrawer);
-                        else if(s.Died)
-                            DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDieDrawer);
+                        if (s.Died) { isSnakeDied = true; }
+
+                        if (!s.Alive) { isSnakeDied = true; }
+                        else { isSnakeDied = false; }
+
+                        DrawObjectWithTransform(canvas, s, s.Body.Last().GetX(), s.Body.Last().GetY(), 0, SnakeDrawer);
                     }
 
-                    foreach (PowerUp p in theWorld.PowerUps.Values)
+                    foreach (PowerUp p in theWorld.PowerUps.Values.ToList())
                         DrawObjectWithTransform(canvas, p, p.Location.GetX(), p.Location.GetY(), 0, PowerUpDrawer);
                 }
             }

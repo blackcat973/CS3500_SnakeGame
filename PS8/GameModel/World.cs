@@ -8,10 +8,13 @@ namespace GameWorld
 {
     public class World
     {
-        public int UniqueId { get; set; }
         public Dictionary<int, Snake> SnakePlayers;
         public Dictionary<int, PowerUp> PowerUps;
         public Dictionary<int, Wall> Walls;
+
+
+
+
         public int Size { get; private set; }
 
         public World(int _size)

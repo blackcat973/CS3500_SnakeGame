@@ -20,12 +20,21 @@
                              Spacing="10"
                              VerticalOptions="Center">
             <HorizontalStackLayout HorizontalOptions="Center">
+                <Label Text="Server Status: " VerticalOptions="Center" />
+                <Ellipse Fill="Red"
+                         WidthRequest="15"
+                         HeightRequest="15"
+                         HorizontalOptions="Start" 
+                          x:Name="ServerStatus" />
+                
+                
                 <Label Text="server: " VerticalOptions="Center" />
                 <Entry Text="localhost" x:Name="serverText" />
                 <Label Text="name: " VerticalOptions="Center" />
                 <Entry Text="player" x:Name="nameText" />
                 <Button Text="connect"
                         Clicked="ConnectClick"
+                        
                         x:Name="connectButton"/>
                 <Button Text="help"
                         Clicked="ControlsButton_Clicked"/>

@@ -1,5 +1,6 @@
 ﻿using GameSystem;
 using GameWorld;
+using Microsoft.Maui;
 
 namespace SnakeGame;
 
@@ -8,12 +9,7 @@ public partial class MainPage : ContentPage
 
     private GameController gameController;
 
-    public bool isWallCreated = false;
-
-    public delegate void DrawingDone();
-    public event DrawingDone? DoneFrame;
-
-    
+    public bool isWallCreated = false;  
 
     public MainPage()
     {
@@ -23,18 +19,22 @@ public partial class MainPage : ContentPage
 
         gameController.DatasArrived += OnFrame;
 
-        gameController.WorldCreate += drawingWorld;
+        gameController.WorldCreate += DrawingWorld;
 
         gameController.Error += NetworkErrorHandler;
+
+        gameController.Connected += ButtonDisable;
+
     }
 
 
-    private void drawingWorld()
+    private void DrawingWorld()
     {
         worldPanel.SetWorld(gameController.World);
-        worldPanel.SetUniqueID(gameController.World.UniqueId);
+        worldPanel.SetUniqueID(gameController.getUniqueID());
         OnFrame();
     }
+
 
     void OnTapped(object sender, EventArgs args)
     {
@@ -74,7 +74,9 @@ public partial class MainPage : ContentPage
 
     private void NetworkErrorHandler(string s)
     {
-        DisplayAlert("Error", s + ". Please try again. ", "OK");
+        Dispatcher.Dispatch(() => DisplayAlert("Error", s + " Please try again. ", "OK"));
+        Dispatcher.Dispatch(() => connectButton.IsEnabled = true);
+        Dispatcher.Dispatch(() => ServerStatus.Fill = Colors.Red);
     }
 
 
@@ -102,18 +104,26 @@ public partial class MainPage : ContentPage
             DisplayAlert("Error", "Name must be less than 16 characters", "OK");
             return;
         }
-        //DisplayAlert("Delete this", "Code to connect to server goes here", "OK");
-
         gameController.Connect(serverText.Text, nameText.Text);
 
         keyboardHack.Focus();
     }
 
+    public void ButtonDisable()
+    {
+        Dispatcher.Dispatch(() => ServerStatus.Fill = Colors.Green );
+        Dispatcher.Dispatch(() => connectButton.IsEnabled= false);
+    }
+
+    //public void ButtonEnable()
+    //{
+    //}
     /// <summary>
     /// Use this method as an event handler for when the controller has updated the world
     /// </summary>
     public void OnFrame()
-    {
+    {   
+
         Dispatcher.Dispatch(() => graphicsView.Invalidate());
     }
 
