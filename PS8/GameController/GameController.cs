@@ -275,7 +275,6 @@ namespace GameSystem
                     }
                 }
                 //when string s is not JSON type, it means first send. 
-                //Maybe, need to find another way to do.
                 catch (Exception)
                 {
                     if (FirstSend)
