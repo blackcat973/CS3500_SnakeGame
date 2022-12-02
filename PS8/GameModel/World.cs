@@ -1,4 +1,7 @@
-﻿using System;
+﻿/**
+ * This code is from GameLab\Models\World.cs, just for simple code
+ */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,10 +14,6 @@ namespace GameWorld
         public Dictionary<int, Snake> SnakePlayers;
         public Dictionary<int, PowerUp> PowerUps;
         public Dictionary<int, Wall> Walls;
-
-
-
-
         public int Size { get; private set; }
 
         public World(int _size)
@@ -24,7 +23,5 @@ namespace GameWorld
             Walls = new Dictionary<int, Wall>();
             Size = _size;
         }
-
-
     }
 }

@@ -1,5 +1,5 @@
 ﻿/**
- * This code is from GameLab\Models\World.cs, just for simple code
+ * This code is from GameLab\Models\Wall.cs, just for simple code
  */
 using Newtonsoft.Json;
 using SnakeGame;
@@ -23,7 +23,5 @@ namespace GameWorld
             Point1 = new Vector2D(x, y);
             Point2 = new Vector2D(x, y);
         }
-
-
     }
 }
