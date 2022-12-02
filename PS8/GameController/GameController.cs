@@ -49,35 +49,13 @@ namespace GameSystem
         public delegate void ErrorHandler(string error);
         public event ErrorHandler? Error;
 
-        public delegate void GameUpdateHandler();
-        public event GameUpdateHandler? GameUpdate;
-
         public delegate void WorldCreated();
         public event WorldCreated? WorldCreate;
 
-        public delegate void InputAccess(object t);
-        public event InputAccess? InputAvailiable;
-
-        //public delegate void WallCreated();
-        //public event WallCreated? WallCreate;
 
 
 
         SocketState? theServer = null;
-
-        public bool IsConnected()
-        {
-
-            if (theServer.ErrorOccurred)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
 
         public void Connect(string address, string userName)
         {
@@ -115,15 +93,6 @@ namespace GameSystem
             Networking.GetData(theServer);
         }
 
-        public void CheckServerStatus()
-        {
-
-            if (theServer.ErrorOccurred)
-            {
-                Error?.Invoke("ERRRRR");
-                return;
-            }
-        }
 
         private void ReceiveData(SocketState state)
         {
@@ -179,7 +148,12 @@ namespace GameSystem
 
                 ParsingData(p);
             }
-            DatasArrived?.Invoke();
+            if (!state.ErrorOccurred)
+            {
+
+                DatasArrived?.Invoke(); 
+            }
+
         }
 
         private void ParsingData(string s)
