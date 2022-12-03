@@ -7,6 +7,7 @@ using System.Numerics;
 
 namespace GameWorld
 {
+
     public class Wall
     {
 
