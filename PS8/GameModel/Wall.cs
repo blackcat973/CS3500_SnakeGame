@@ -4,17 +4,20 @@
 using Newtonsoft.Json;
 using SnakeGame;
 using System.Numerics;
+using System.Runtime.Serialization;
 
 namespace GameWorld
 {
-
+    [DataContract(Namespace ="")]
     public class Wall
     {
-
+        [DataMember(Name = "ID")]
         [JsonProperty(PropertyName = "wall")]
         public int WallID { get; private set; }
+        [DataMember(Name = "p1")]
         [JsonProperty(PropertyName = "p1")]
         public Vector2D Point1;
+        [DataMember(Name = "p2")]
         [JsonProperty(PropertyName = "p2")]
         public Vector2D Point2;
 
