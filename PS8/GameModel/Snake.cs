@@ -38,5 +38,20 @@ namespace GameWorld
             this.Dir = new Vector2D(1, 0);
             this.Score = score;
         }
+
+        public void Step(int velocity)
+        {
+            for(int i=0; i<Body.Count; i++)
+            {
+                this.Body[i] += this.Dir * velocity;
+            }
+        }
+
+        public bool Collsion(object o, double x, double y)
+        {
+            if (this.Body)
+
+            return false;
+        }
     }
 }

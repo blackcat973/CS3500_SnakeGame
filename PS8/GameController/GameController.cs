@@ -6,6 +6,7 @@
  * and then get data again from the server, and update View.
  */
 
+//using GameServer;
 using GameWorld;
 using NetworkUtil;
 using Newtonsoft.Json;
@@ -26,6 +27,7 @@ namespace GameSystem
         /// Key press handlers in your View should be "landing points"only,
         /// and should invoke controller method that contain the heavy logic.
         /// </summary>
+
 
         //Input user name.
         private string? UserName { get; set; }
