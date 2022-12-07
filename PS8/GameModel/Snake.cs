@@ -11,7 +11,7 @@ namespace GameWorld
     {
         //snake's unique ID
         [JsonProperty(PropertyName = "snake")]
-        public int UniqueID { get; private set; }
+        public long UniqueID { get; private set; }
         //player's name
         [JsonProperty(PropertyName = "name")]
         public string Name { get; private set; }
@@ -30,7 +30,7 @@ namespace GameWorld
         [JsonProperty(PropertyName = "join")]
         public bool Join { get; private set; } = false;
 
-        public Snake(int id, string name, int x, int y, int score)
+        public Snake(long id, string name, int score)
         {
             this.UniqueID = id;
             this.Name = name;
@@ -39,18 +39,24 @@ namespace GameWorld
             this.Score = score;
         }
 
-        public void Step(int velocity)
+        public void Step(float velocity)
         {
-            for(int i=0; i<Body.Count; i++)
+            if (Alive)
             {
-                this.Body[i] += this.Dir * velocity;
+                Vector2D previousBody = this.Body[0];
+
+                this.Body[0] += this.Dir * velocity;
+
+                for (int i = 1; i < Body.Count; i++)
+                {
+                    this.Body[i] = previousBody;
+                    previousBody = this.Body[i];
+                }
             }
         }
 
         public bool Collsion(object o, double x, double y)
         {
-            if (this.Body)
-
             return false;
         }
     }

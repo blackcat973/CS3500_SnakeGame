@@ -18,7 +18,7 @@ using System;
 
 
 namespace GameSystem
-{
+{   
     public class GameController
     {
         /// <summary>
@@ -308,8 +308,13 @@ namespace GameSystem
             //receiving its player ID, world size, and walls.
             if(World is not null && (World.SnakePlayers.Count>0 || World.PowerUps.Count>0) || s is not null)
             {
-                if(theServer is not null)
-                    Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
+                if (theServer is not null)
+                {
+                    if(s is not null)
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
+                    else
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "none" }) + "\n");
+                }
             }
         }
     }

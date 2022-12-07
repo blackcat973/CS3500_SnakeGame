@@ -11,16 +11,16 @@ namespace GameWorld
 {
     public class World
     {
-        public Dictionary<int, Snake> SnakePlayers;
-        public Dictionary<int, PowerUp> PowerUps;
-        public Dictionary<int, Wall> Walls;
+        public Dictionary<long, Snake> SnakePlayers;
+        public Dictionary<long, PowerUp> PowerUps;
+        public Dictionary<long, Wall> Walls;
         public int Size { get; private set; }
 
         public World(int _size)
         {
-            SnakePlayers = new Dictionary<int, Snake>();
-            PowerUps = new Dictionary<int, PowerUp>();
-            Walls = new Dictionary<int, Wall>();
+            SnakePlayers = new Dictionary<long, Snake>();
+            PowerUps = new Dictionary<long, PowerUp>();
+            Walls = new Dictionary<long, Wall>();
             Size = _size;
         }
     }

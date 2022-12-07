@@ -2,6 +2,7 @@
  * This class is for View of MVC.
  * It draws every object of the world based on the World data arrived from the Controller.
  * It also draws each object based on the delegate method.
+ * 
  */
 
 using System.Collections.Generic;

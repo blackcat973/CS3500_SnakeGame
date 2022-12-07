@@ -22,5 +22,9 @@ namespace GameWorld
             Power = id;
             Location = new Vector2D(x, y);
         }
+        public void Step(float velocity)
+        {
+            
+        }
     }
 }
