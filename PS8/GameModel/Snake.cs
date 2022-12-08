@@ -22,42 +22,75 @@ namespace GameWorld
         [JsonProperty(PropertyName = "score")]
         public int Score { get; private set; }
         [JsonProperty(PropertyName = "died")]
-        public bool Died { get; private set; } = false;
+        public bool Died { get; set; } = false;
         [JsonProperty(PropertyName = "alive")]
-        public bool Alive { get; private set; } = true;
+        public bool Alive { get; set; } = true;
         [JsonProperty(PropertyName = "dc")]
         public bool Disconnected { get; private set; } = false;
         [JsonProperty(PropertyName = "join")]
         public bool Join { get; private set; } = false;
+
+        public bool DirChange { get; set; } = false;
+        public string currDir { get; set; }
 
         public Snake(long id, string name, int score)
         {
             this.UniqueID = id;
             this.Name = name;
             this.Body = new List<Vector2D>();
-            this.Dir = new Vector2D(1, 0);
+            this.Dir = new Vector2D(0, -1);
             this.Score = score;
+            this.currDir = "up";
         }
 
-        public void Step(float velocity)
+        public void Step(float velocity, int worldsize)
         {
             if (Alive)
             {
-                Vector2D previousBody = this.Body[0];
+                if (DirChange)
+                {
+                    Body.Add(Body.Last());
+                    DirChange = false;
+                }
 
+                // Wraparound
+                if (Body.Last().X >= worldsize / 2)
+                {
+                    Body.Add(Body.Last());
+                    Body.Last().X = -worldsize / 2;
+                    Body.Add(Body.Last());
+                }
+                else if (Body.Last().Y >= worldsize / 2)
+                {
+                    Body.Add(Body.Last());
+                    Body.Last().Y = -worldsize / 2;
+                    Body.Add(Body.Last());
+                }
+                else if (Body.Last().Y <= -worldsize / 2)
+                {
+                    Body.Add(Body.Last());
+                    Body.Last().Y = worldsize / 2;
+                    Body.Add(Body.Last());
+                }
+                else if (Body.Last().Y <= -worldsize / 2)
+                {
+                    Body.Add(Body.Last());
+                    Body.Last().Y = worldsize / 2;
+                    Body.Add(Body.Last());
+                }
+
+                int bodyCount = this.Body.Count;
+
+                this.Body[bodyCount-1] += this.Dir * velocity;
+                
                 this.Body[0] += this.Dir * velocity;
 
-                for (int i = 1; i < Body.Count; i++)
+                if(bodyCount != 2)
                 {
-                    this.Body[i] = previousBody;
-                    previousBody = this.Body[i];
+                    if (Body[1] == Body[0])
+                        Body.Remove(Body.First());
                 }
             }
-        }
-
-        public bool Collsion(object o, double x, double y)
-        {
-            return false;
         }
     }
 }

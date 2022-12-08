@@ -22,9 +22,17 @@ namespace GameWorld
             Power = id;
             Location = new Vector2D(x, y);
         }
-        public void Step(float velocity)
-        {
+        //public void Step(double x, double y)
+        //{
             
-        }
+        //}
+
+        //public bool Collision(double x, double y)
+        //{
+        //    if (Math.Sqrt(Location.X * x + Location.Y * y) <= 5)
+        //        return true;
+
+        //    return false;
+        //}
     }
 }

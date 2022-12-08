@@ -279,8 +279,8 @@ public class WorldPanel : IDrawable
     {
         PowerUp p = o as PowerUp;
         // The size of the PowerUp object
-        float radius1 = 8;
-        float radius2 = 4;
+        float radius1 = 5;
+        float radius2 = 2.5f;
 
         canvas.FillColor = Colors.DarkGreen;
         canvas.FillCircle(0, 0, radius1);
