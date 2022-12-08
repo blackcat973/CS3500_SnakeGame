@@ -22,6 +22,8 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using SnakeGame;
+using System.Drawing;
+using System.Numerics;
 
 namespace Server
 {
@@ -30,6 +32,7 @@ namespace Server
         private Dictionary<long, SocketState> clients;
 
         private static World? theWorld;
+        private Random rand = new();
 
         private float _snakeSpeed = 3;
         private int _startingLength = 120;
@@ -38,48 +41,159 @@ namespace Server
         private int _maxPowerups = 20;
         private int _maxPowerupDelay = 200;
 
-        private static int _universeSize = -1;
-        private int timePerFrame = -1;
-        private int framesPerShot = -1;
-        private int respawnDelay = -1;
+        private static int _universeSize;
+        private static long _timePerFrame;
+        private static long _framesPerShot;
+        private static long _respawnDelay;
 
         public static void Main(string[] args)
         {
             Server server = new Server();
+
+            ReadAndSet();
+
             server.StartServer();
-
-            ReadXml();
-
-            Thread t = new Thread(server.Run);
-
-            t.Start();
 
             Console.Read();
         }
 
         public Server()
-        {   
+        {
             clients = new Dictionary<long, SocketState>();
+        }
+
+        public void StartServer()
+        {
+            //we need to put here or in NewClientConnected.
+
+            Networking.StartServer(NewClientConnected, 11000);
+
+
+
+            Console.WriteLine("Server is running. Accepting clients");
+        }
+
+        private void NewClientConnected(SocketState state)
+        {
+            //https://stackoverflow.com/questions/363377/how-do-i-run-a-simple-bit-of-code-in-a-new-thread
+            new Thread(() =>
+            {
+                if (state.ErrorOccurred)
+                    return;
+
+                // Client 0 connected console line 적어야 될듯
+                //Accepted new connection.
+                // New Thread creating
+
+                state.OnNetworkAction = ReceiveName;
+
+                Networking.GetData(state);
+            }).Start();
+
+        }
+
+
+        private void ReceiveName(SocketState state)
+        {
+            if (state.ErrorOccurred)
+            {
+                RemoveClient(state.ID);
+                return;
+            }
+
+            // The server must allow for additional clients to connect at any time, and add them to its list of clients.
+            // Lock(state)가 필요한지 체크해야됨
+            lock (state)
+            {
+                string playerName = state.GetData();
+
+                string replacement = Regex.Replace(playerName, @"\t|\n|\r", "");
+
+                //Create the new Snake
+                Snake playerSnake = new Snake(state.ID, replacement, 0); // p = playerName
+
+                Vector2D vector = new Vector2D(-299.54809474945068, 705.3624391555786);
+
+                Vector2D vector2 = new Vector2D(-299.5480947494507, 585.3624391555786);
+
+                playerSnake.Body.Add(vector2);
+                playerSnake.Body.Add(vector);
+                // Body를 생성해줘야함. Method따로? based on 
+                theWorld.SnakePlayers.Add(state.ID, playerSnake);
+
+                state.RemoveData(0, playerName.Length);
+
+                // ??? - inside or outside of this lock branket?
+
+                // Save clinet information into the clients list.
+                clients[state.ID] = state;
+                ////Send the client a unique player ID and the world size
+                //Networking.Send(state.TheSocket, state.ID.ToString() + "\n" + _universeSize.ToString() + "\n");
+                ////Send the JSON walls
+
+                //foreach (PowerUp p in theWorld.PowerUps.Values)
+                //    Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
+
+                //foreach (Snake s in theWorld.SnakePlayers.Values)
+                //    Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
+
+                HashSet<long> disconnectedClients = new HashSet<long>();
+                lock (clients)
+                {
+                    foreach (SocketState client in clients.Values)
+                    {
+                        if (!Networking.Send(client.TheSocket!, state.ID + "\n" + _universeSize + "\n"))
+                            disconnectedClients.Add(client.ID);
+                    }
+
+                    foreach (Wall w in theWorld.Walls.Values)
+                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(w) + "\n");
+
+                }
+
+                foreach (long id in disconnectedClients)
+                    RemoveClient(id);
+
+                // ***********************************************************************************************
+                // ***********************************************************************************************
+                // ***After this point, the server begins sending the new client the world state on each frame.***
+                // ***********************************************************************************************
+                // ***********************************************************************************************
+
+            }
+
+
+            state.OnNetworkAction = ReceiveCommand;
+            //Do we have to call?
+            Run();
+
+            Networking.GetData(state);
         }
 
         public void Run()
         {
-            // Start a new timer to control the frame rate
+
             System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
             watch.Start();
+
+
 
             while (true)
             {
                 // wait until the next frame
-                while (watch.ElapsedMilliseconds < timePerFrame)
-                { /* empty loop body */ }
+                while (watch.ElapsedMilliseconds < _timePerFrame)
+                { }
 
                 watch.Restart();
+                //if(theWorld.PowerUps.Count< 20)
+                //{
+                //    _maxPowerupDelay
+                //}
 
-                // 여기가 맞는 위치인진 모르겟음
+                //Update the world.
+                Update();
 
-                //Update();
-
+                //send the data to the network
                 lock (clients)
                 {
                     foreach (SocketState c in clients.Values)
@@ -94,92 +208,9 @@ namespace Server
                     }
                 }
             }
+
         }
 
-        public void StartServer()
-        {
-            Networking.StartServer(NewClientConnected, 11000);
-
-            Console.WriteLine("Server is running. Accepting clients");
-        }
-
-        private void NewClientConnected(SocketState state)
-        {
-            if (state.ErrorOccurred)
-                return;
-
-            // Client 0 connected console line 적어야 될듯
-            //Accepted new connection.
-            // New Thread creating
-
-            state.OnNetworkAction = ReceiveName;
-
-            Networking.GetData(state);
-        }
-
-        private void ReceiveName(SocketState state)
-        {
-            if(state.ErrorOccurred)
-            {
-                RemoveClient(state.ID);
-                return;
-            }
-
-            // The server must allow for additional clients to connect at any time, and add them to its list of clients.
-            // Lock(state)가 필요한지 체크해야됨
-            lock (state)
-            {
-                string playerName = state.GetData();
-                string[] parts = Regex.Split(playerName, @"(?<=[\n])");
-
-                foreach(string p in parts)
-                {
-                    if (p.Length == 0)
-                        continue;
-                    // The regex splitter will include the last string even
-                    // if it doesn't end with a '\n',
-                    // So we need to ignore it if this happens.
-                    if (p[p.Length - 1] != '\n')
-                        break;
-                    // Then remove it from the SocketState's growable buffer
-
-                    state.RemoveData(0, p.Length);
-
-                    // Snake생성 - 고유ID에 맞는 자리에 ADD
-                    Snake sp = new Snake(state.ID, p, 0); // p = playerName
-                    // Body를 생성해줘야함. Method따로? based on 
-                    theWorld.SnakePlayers.Add(state.ID, sp);
-                }
-
-                //ReceiveCommand(state);
-
-                state.OnNetworkAction = ReceiveCommand;
-
-
-                // ??? - inside or outside of this lock branket?
-                lock (clients)
-                {
-                    // Save clinet information into the clients list.
-                    clients[state.ID] = state;
-
-                    Networking.Send(state.TheSocket, state.ID.ToString() + "\n" + _universeSize.ToString() + "\n");
-                    foreach(Wall w in theWorld.Walls.Values)
-                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(w) + "\n");
-                    foreach (PowerUp p in theWorld.PowerUps.Values)
-                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
-                    foreach (Snake s in theWorld.SnakePlayers.Values)
-                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-
-                    // ***********************************************************************************************
-                    // ***********************************************************************************************
-                    // ***After this point, the server begins sending the new client the world state on each frame.***
-                    // ***********************************************************************************************
-                    // ***********************************************************************************************
-                }
-            }
-
-            Networking.GetData(state);
-        }
 
         private void ReceiveCommand(SocketState state)
         {
@@ -194,16 +225,18 @@ namespace Server
             {
                 JObject obj = JObject.Parse(commandData);
 
-                if(obj.ContainsKey("moving"))
+                if (obj.ContainsKey("moving"))
                 {
 
                     string? direction = JsonConvert.DeserializeObject<string>(obj.ToString());
-                    if(direction is not null && theWorld is not null)
+                    if (direction is not null && theWorld is not null)
                     {
+
+                        //155 155-3
                         if (direction.Equals("up"))
-                            theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, 1f);
-                        else if (direction.Equals("down"))
                             theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, -1f);
+                        else if (direction.Equals("down"))
+                            theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, 1f);
                         else if (direction.Equals("left"))
                             theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(-1f, 0f);
                         else if (direction.Equals("up"))
@@ -211,7 +244,7 @@ namespace Server
                     }
                 }
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
 
             }
@@ -228,142 +261,51 @@ namespace Server
             }
         }
 
-        public static void ReadXml()
+        public void Update()
+        {
+
+            int nextPlayerID = 0;
+
+            // cleanup the deactivated objects
+            IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
+            IEnumerable<int> powsToRemove = theWorld.PowerUps.Values.Where(x => x.Died).Select(x => x.Power);
+
+            foreach (int i in playersToRemove)
+                theWorld.SnakePlayers.Remove(i);
+            foreach (int i in powsToRemove)
+                theWorld.SnakePlayers.Remove(i);
+
+            // move/update the existing objects in the world
+            foreach (Snake p in theWorld.SnakePlayers.Values)
+                p.Step(_snakeSpeed);
+
+            //foreach (PowerUp p in theWorld.PowerUps.Values)
+            //    p.Step();
+
+
+   
+
+        }
+
+        public static void ReadAndSet()
         {
             DataContractSerializer ser = new(typeof(GameSettings));
 
             XmlReader reader = XmlReader.Create(@"..\..\..\settings.xml");
 
-            GameSettings gs = (GameSettings)ser.ReadObject(reader);
+            GameSettings gameSettings = (GameSettings)ser.ReadObject(reader);
 
-            CreateWorld(gs.UniverseSize);
+            _universeSize = gameSettings.UniverseSize;
+            _framesPerShot = gameSettings.FramesPerShot;
+            _respawnDelay = gameSettings.RespawnRate;
+            _timePerFrame = gameSettings.MSPerFrame;
 
-            //Create the wall.
-            foreach (Wall wall in gs.Walls)
+            theWorld = new World(gameSettings.UniverseSize);
+
+            foreach (Wall wall in gameSettings.Walls)
             {
                 theWorld.Walls.Add(wall.WallID, wall);
             }
-
-            //using (FileStream fileStream = new FileStream(@"..\..\..\settings.xml", FileMode.Open))
-            //{
-            //    GameSettings result = (GameSettings)serializer.Deserialize(fileStream);
-            //}
-
-            //XmlDocument doc = new XmlDocument();
-            //doc.Load(@"..\..\..\settings.xml");
-
-            //foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-            //{
-            //    string text = node.InnerText; //or loop through its children as well
-            //    Console.WriteLine(text);
-            //}
-            ////https://stackoverflow.com/questions/642293/how-do-i-read-and-parse-an-xml-file-in-c
-            //foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-            //{
-            //    if (node.Name.Equals("FramesPerShot"))
-            //    {
-            //        framePerShot = Convert.ToInt32(node.InnerText);
-            //    }
-            //    else if (node.Name.Equals("MSPerFrame"))
-            //    {
-            //        msPerFrame = Convert.ToInt32(node.InnerText);
-            //    }z
-            //    else if (node.Name.Equals("RespawnRate"))
-            //    {
-            //        respawnRate = Convert.ToInt32(node.InnerText);
-            //    }
-            //    else if (node.Name.Equals("UniverseSize"))
-            //    {
-            //        size = Convert.ToInt32(node.InnerText);
-            //    }
-            //    else if (node.Name.Equals("Walls"))
-            //    {
-            //        foreach (XmlNode node2 in node.ChildNodes)
-            //        {
-            //            foreach (XmlNode node3 in node2.ChildNodes)
-            //            {
-            //                Console.WriteLine(node3.InnerText);
-            //            }
-            //        }
-            //    }
-            //}
         }
-
-        public static void CreateWorld(int worldSize)
-        {
-            _universeSize = worldSize;
-            theWorld = new World(worldSize);
-        }
-
-        public void Update()
-        {
-            IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
-            IEnumerable<int> powsToRemove = theWorld.PowerUps.Values.Where(x => x.Died).Select(x => x.Power);
-            foreach( int i in playersToRemove)
-            {
-                theWorld.SnakePlayers.Remove(i);
-            }
-            foreach (int i in powsToRemove)
-            {
-                theWorld.PowerUps.Remove(i);
-            }
-
-            foreach( Snake s in theWorld.SnakePlayers.Values)
-            {
-                s.Step(_snakeSpeed);
-            }
-            foreach( PowerUp p in theWorld.PowerUps.Values)
-            {
-            }
-        }
-
-        //public void Connect()
-        //{
-        //    //start an event-loop that listens for TCP connections from clients. When a new client
-        //    //connects, the server must implement the server-side of the handshake in the communication
-        //    //protocol described in PS8
-        //    //add them to its list of clients.
-
-        //    //handshake.
-
-        //    //Server Architecture
-
-        //    /* 1. Client connects change Action, 
-        //     *    ask for data.
-        //        2. Client's name received
-        //            Send startup info
-        //            save SocketState
-        //            Change Action, ask for data.
-        //        3. Command received
-        //    */
-
-        //    // 38 : 00
-        //    //new thread calls
-        //    //change the Action and it asks the clients for data.
-        //    //Save socket state for client.
-
-        //    //multiple clients
-
-        //    /*
-        //     * while(true) -> updateworld() -> foreach client send world
-        //     * one frame.
-        //     */
-
-        //    //When a new connection is made, ClientConnects will be called.
-        //    Networking.StartServer(ClientConnects, 11000);
-
-
-
-        //}
-
-        //public void ClientConnects(SocketState socketState)
-        //{
-        //    socketState.OnNetworkAction =
-        //}
-
-        //public void UpdateWorld()
-        //{
-
-        //}
     }
 }

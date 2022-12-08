@@ -6,6 +6,7 @@ using SnakeGame;
 
 namespace GameWorld
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class PowerUp
     {
         [JsonProperty(PropertyName = "power")]
