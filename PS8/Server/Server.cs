@@ -9,6 +9,10 @@
  * 2. Snake 모델 쪽 수정해야할듯 ex) Join -> 들어왔을 때 True
  * 3. PowerUp 좌표는 랜덤. 랜덤발생 -> GameLab 랜덤하게 생성하게 만드는 함수
  * 4. Console.Read(); <- OnReceive
+ * 
+ * 12/08
+ * Collision Snake <-> Wall
+ * Collision Snake <-> Powerup
  */
 
 using System.Xml.Linq;
