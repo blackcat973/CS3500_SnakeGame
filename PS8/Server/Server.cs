@@ -117,7 +117,6 @@ namespace Server
                 Snake playerSnake = new Snake(state.ID, replacement, 0); // p = playerName
 
                 Vector2D vector = new Vector2D(-299.54809474945068, 705.3624391555786);
-
                 Vector2D vector2 = new Vector2D(-299.5480947494507, 585.3624391555786);
 
                 playerSnake.Body.Add(vector);
@@ -164,10 +163,9 @@ namespace Server
                 // ***After this point, the server begins sending the new client the world state on each frame.***
                 // ***********************************************************************************************
                 // ***********************************************************************************************
-
             }
 
-
+            state.OnNetworkAction = ReceiveCommand;
 
             //Do we have to call?
             Run();
@@ -213,7 +211,47 @@ namespace Server
                     }
                 }
             }
+        }
 
+        private void ReceiveCommand(SocketState state)
+        {
+            if (state.ErrorOccurred)
+            {
+                RemoveClient(state.ID);
+                return;
+            }
+            string commandData = state.GetData();
+            try
+            {
+                JObject obj = JObject.Parse(commandData);
+
+                if (obj.ContainsKey("moving"))
+                    if (obj.ContainsKey("moving"))
+                    {
+
+                        string? direction = JsonConvert.DeserializeObject<string>(obj.ToString());
+                        if (direction is not null && theWorld is not null)
+                            if (direction is not null && theWorld is not null)
+                            {
+
+                                //155 155-3
+                                if (direction.Equals("up"))
+                                    theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, 1f);
+                                else if (direction.Equals("down"))
+                                    theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, -1f);
+                                else if (direction.Equals("down"))
+                                    theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(0f, 1f);
+                                else if (direction.Equals("left"))
+                                    theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(-1f, 0f);
+                                else if (direction.Equals("up"))
+                                    theWorld.SnakePlayers[state.ID].Dir = new SnakeGame.Vector2D(1f, 0f);
+                            }
+                    }
+            }
+            catch (Exception e)
+            {
+            }
+            Networking.GetData(state);
         }
 
         private bool checkSWCollision(Snake s, Wall w)
