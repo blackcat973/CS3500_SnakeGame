@@ -116,12 +116,12 @@ namespace Server
                 //Create the new Snake
                 Snake playerSnake = new Snake(state.ID, replacement, 0); // p = playerName
 
-                Vector2D vector = new Vector2D(-509.54809474945068, 705.3624391555786);
+                Vector2D vector = new Vector2D(-299.54809474945068, 705.3624391555786);
 
-                Vector2D vector2 = new Vector2D(-509.5480947494507, 585.3624391555786);
+                Vector2D vector2 = new Vector2D(-299.5480947494507, 585.3624391555786);
 
-                playerSnake.Body.Add(vector);
                 playerSnake.Body.Add(vector2);
+                playerSnake.Body.Add(vector);
                 // Body를 생성해줘야함. Method따로? based on 
                 theWorld.SnakePlayers.Add(state.ID, playerSnake);
 

@@ -7,6 +7,7 @@ using SnakeGame;
 
 namespace GameWorld
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class Snake
     {
         //snake's unique ID
@@ -16,9 +17,9 @@ namespace GameWorld
         [JsonProperty(PropertyName = "name")]
         public string Name { get; private set; }
         [JsonProperty(PropertyName = "body")]
-        public List<Vector2D> Body;
+        public List<Vector2D> Body { get; private set; }
         [JsonProperty(PropertyName = "dir")]
-        public Vector2D Dir;
+        public Vector2D Dir { get;  set; }
         [JsonProperty(PropertyName = "score")]
         public int Score { get; private set; }
         [JsonProperty(PropertyName = "died")]
