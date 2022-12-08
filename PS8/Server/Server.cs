@@ -120,8 +120,8 @@ namespace Server
 
                 Vector2D vector2 = new Vector2D(-299.5480947494507, 585.3624391555786);
 
-                playerSnake.Body.Add(vector2);
                 playerSnake.Body.Add(vector);
+                playerSnake.Body.Add(vector2);
                 // Body를 생성해줘야함. Method따로? based on 
                 theWorld.SnakePlayers.Add(state.ID, playerSnake);
 
