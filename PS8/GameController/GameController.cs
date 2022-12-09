@@ -311,9 +311,9 @@ namespace GameSystem
                 if (theServer is not null)
                 {
                     if(s is not null)
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = s }) + "\n");
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new {moving = s}) + "\n");
                     else
-                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new { moving = "none" }) + "\n");
+                        Networking.Send(theServer.TheSocket, JsonConvert.SerializeObject(new {moving = "none"}) + "\n");
                 }
             }
         }

@@ -279,8 +279,8 @@ public class WorldPanel : IDrawable
     {
         PowerUp p = o as PowerUp;
         // The size of the PowerUp object
-        float radius1 = 5;
-        float radius2 = 2.5f;
+        float radius1 = 10f;
+        float radius2 = 5f;
 
         canvas.FillColor = Colors.DarkGreen;
         canvas.FillCircle(0, 0, radius1);
@@ -359,7 +359,8 @@ public class WorldPanel : IDrawable
                     }
                     // Drawing Powerup
                     foreach (PowerUp p in theWorld.PowerUps.Values.ToList())
-                        DrawObjectWithTransform(canvas, p, p.Location.GetX(), p.Location.GetY(), PowerUpDrawer);
+                        if(!p.Died)
+                            DrawObjectWithTransform(canvas, p, p.Location.GetX(), p.Location.GetY(), PowerUpDrawer);
                 }
             }
         }

@@ -16,9 +16,9 @@ namespace GameWorld
         public Vector2D Location;
 
         [JsonProperty(PropertyName = "died")]
-        public bool Died { get; private set; } = false;
+        public bool Died { get; set; } = false;
 
-        public PowerUp(int id, int x, int y)
+        public PowerUp(int id, double x, double y)
         {
             Power = id;
             Location = new Vector2D(x, y);
