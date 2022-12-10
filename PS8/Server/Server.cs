@@ -49,6 +49,7 @@ namespace Server
             Console.Read();
         }
 
+
         /// <summary>
         /// Server default constructor
         /// </summary>
@@ -58,6 +59,7 @@ namespace Server
             respawnPowerup = new List<int>() { };
             respawnFrame = new List<int>() { };
         }
+
 
         /// <summary>
         /// Start the server and get ready for accepting clients
@@ -70,10 +72,12 @@ namespace Server
             Console.WriteLine("Server is running. Accepting clients");
         }
 
+
         /// <summary>
         /// Accept client callback method
         /// </summary>
         /// <param name="state"></param>
+        /// 
         private void NewClientConnected(SocketState state)
         {
             try
@@ -150,7 +154,9 @@ namespace Server
                 }
 
                 // ***********************************************************************************************
+                // ***********************************************************************************************
                 // ***After this point, the server begins sending the new client the world state on each frame.***
+                // ***********************************************************************************************
                 // ***********************************************************************************************
             }
 
@@ -167,6 +173,7 @@ namespace Server
         /// if client have disconnection issue, make snake inactive.
         /// </summary>
         /// <param name="state"></param>
+        /// 
         public void Run(SocketState state)
         {
             System.Diagnostics.Stopwatch watch = new System.Diagnostics.Stopwatch();
@@ -179,46 +186,54 @@ namespace Server
                 {
                     Console.WriteLine("Client " + state.ID + " is disconnected.");
                     //if snake is disconnected, died and disconnected should be true on one frame.
-                    //And remove the snake from the world.
-
                     theWorld.SnakePlayers[state.ID].Disconnected = true;
-                    theWorld.SnakePlayers[state.ID].Died = true;
-                    theWorld.SnakePlayers.Remove(state.ID);
                     return;
                 }
-
                 //Busy Loop. It is okay for our purposes.
                 while (watch.ElapsedMilliseconds < _timePerFrame)
                 { }
                 watch.Restart();
                 //Update the world.
-                try
+                //lock the world while updating.
+                lock (theWorld)
                 {
-                    //lock the world while updating.
-                    lock (theWorld)
+                    Update(state);
+                }
+                //send the data to the network and lock the world for not modified while we are sending data. 
+                lock (theWorld)
+                {
+                    //if state is still connected, send it.
+
+                    //Send "all of snakes" information in the world 
+                    foreach (Snake s in theWorld.SnakePlayers.Values)
                     {
-                        Update(state);
-                    }
-                    //send the data to the network and lock the world for not modified while we are sending data. 
-                    lock (theWorld)
-                    {
-                        //if state is still connected, send it.
-                        if (state.TheSocket.Connected)
+                        //We need to send the at least once to let client know if there is disconnected snake or not.
+                        if (s.Disconnected)
                         {
-                            //Send "all of snakes" information in the world 
-                            foreach (Snake s in theWorld.SnakePlayers.Values)
-                                Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-                            //Send "all of powerup" information in the world. 
-                            foreach (PowerUp p in theWorld.PowerUps.Values)
-                                Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
+                            s.Died = true;
+                            s.Alive = false;
+                            Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
                         }
+                        else
+                        {
+                            Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
+                        }
+
                     }
-                    Networking.GetData(state);
+                    //Send "all of powerup" information in the world. 
+                    foreach (PowerUp p in theWorld.PowerUps.Values)
+                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
                 }
-                catch (Exception)
+                //Save disconnected snake from the world.
+                IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
+                //remove all of disconnected snakes.
+                foreach (long i in playersToRemove)
                 {
-                    throw;
+                    theWorld.SnakePlayers.Remove(i);
                 }
+
+                Networking.GetData(state);
+
             }
         }
 
@@ -261,6 +276,7 @@ namespace Server
             }
         }
 
+
         /// <summary>
         /// This method is for collision between snake and wall.
         /// 
@@ -287,6 +303,7 @@ namespace Server
                 xUpperVertex = w.Point1.X + 25.0;
                 xlowerVertex = w.Point1.X - 25.0;
 
+
                 // When p1's Y is larger than p2's Y
                 if (w.Point1.Y > w.Point2.Y)
                 {
@@ -294,7 +311,7 @@ namespace Server
                     yUpperVertex = w.Point1.Y + 25.0;
                     ylowerVertex = w.Point2.Y - 25.0;
                 }
-                else // When p1's Y is larger than p2's Y
+                else// When p1's Y is larger than p2's Y
                 {
                     // Set upper range to p1's Y
                     yUpperVertex = w.Point2.Y + 25.0;
@@ -309,7 +326,6 @@ namespace Server
 
                 if (w.Point1.X > w.Point2.X)
                 {
-                    // Set upper range to p1's X
                     xUpperVertex = w.Point1.X + 25.0;
                     xlowerVertex = w.Point2.X - 25.0;
                 }
@@ -319,7 +335,6 @@ namespace Server
                     xlowerVertex = w.Point1.X - 25.0;
                 }
             }
-
             // If it is used as collision of snakes
             if (!respawn)
             {
@@ -327,8 +342,7 @@ namespace Server
                 if (s.Body.Last().X >= xlowerVertex && s.Body.Last().X <= xUpperVertex)
                     if (s.Body.Last().Y >= ylowerVertex && s.Body.Last().Y <= yUpperVertex)
                         return true;
-            }
-            // If it is used as possibility of respawning
+            }            // If it is used as possibility of respawning
             else
             {
                 // Check head's coordinates if respawn's coordinate cannot be used because it is inside of the walls collision box.
@@ -771,30 +785,26 @@ namespace Server
                 theWorld.SnakePlayers[state.ID].Count(_snakeGrowth);
         }
 
-        /// <summary>
-        /// Read XML and setting the world according to datas
-        /// </summary>
         public void ReadAndSet()
         {
-            // serializer
+
             DataContractSerializer ser = new(typeof(GameSettings));
-            
+
             XmlReader reader = XmlReader.Create(@"..\..\..\settings.xml");
-            // Read setting file
+
             GameSettings gameSettings = (GameSettings)ser.ReadObject(reader);
-            // Set the default world.
+
             _universeSize = gameSettings.UniverseSize;
             _framesPerShot = gameSettings.FramesPerShot;
             _respawnDelay = gameSettings.RespawnRate;
             _timePerFrame = gameSettings.MSPerFrame;
-            // Make world object with size setting
+
             theWorld = new World(gameSettings.UniverseSize);
-            // Add all walls information to the world.
+            //Add all walls information to the world.
             foreach (Wall wall in gameSettings.Walls)
             {
                 theWorld.Walls.Add(wall.WallID, wall);
             }
-            // Set powerups here
             for (int i = 0; i < _maxPowerups; i++)
             {
                 theWorld.PowerUps[i] = powerUpRespawn(i);
