@@ -179,54 +179,46 @@ namespace Server
                 {
                     Console.WriteLine("Client " + state.ID + " is disconnected.");
                     //if snake is disconnected, died and disconnected should be true on one frame.
+                    //And remove the snake from the world.
+
                     theWorld.SnakePlayers[state.ID].Disconnected = true;
+                    theWorld.SnakePlayers[state.ID].Died = true;
+                    theWorld.SnakePlayers.Remove(state.ID);
                     return;
                 }
+
                 //Busy Loop. It is okay for our purposes.
                 while (watch.ElapsedMilliseconds < _timePerFrame)
                 { }
                 watch.Restart();
                 //Update the world.
-                //lock the world while updating.
-                lock (theWorld)
+                try
                 {
-                    Update(state);
-                }
-                //send the data to the network and lock the world for not modified while we are sending data. 
-                lock (theWorld)
-                {
-                    //if state is still connected, send it.
-
-                    //Send "all of snakes" information in the world 
-                    foreach (Snake s in theWorld.SnakePlayers.Values)
+                    //lock the world while updating.
+                    lock (theWorld)
                     {
-                        //We need to send the at least once to let client know if there is disconnected snake or not.
-                        if (s.Disconnected)
-                        {
-                            s.Died = true;
-                            s.Alive = false;
-                            Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-                        }
-                        else
-                        {
-                            Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-                        }
-
+                        Update(state);
                     }
-                    //Send "all of powerup" information in the world. 
-                    foreach (PowerUp p in theWorld.PowerUps.Values)
-                        Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
+                    //send the data to the network and lock the world for not modified while we are sending data. 
+                    lock (theWorld)
+                    {
+                        //if state is still connected, send it.
+                        if (state.TheSocket.Connected)
+                        {
+                            //Send "all of snakes" information in the world 
+                            foreach (Snake s in theWorld.SnakePlayers.Values)
+                                Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
+                            //Send "all of powerup" information in the world. 
+                            foreach (PowerUp p in theWorld.PowerUps.Values)
+                                Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
+                        }
+                    }
+                    Networking.GetData(state);
                 }
-                //Save disconnected snake from the world.
-                IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
-                //remove all of disconnected snakes.
-                foreach (long i in playersToRemove)
+                catch (Exception)
                 {
-                    theWorld.SnakePlayers.Remove(i);
+                    throw;
                 }
-
-                Networking.GetData(state);
-
             }
         }
 
