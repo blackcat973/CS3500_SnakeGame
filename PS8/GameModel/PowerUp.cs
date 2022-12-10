@@ -1,5 +1,5 @@
 ﻿/**
- * This code is from GameLab\Models\Powerup.cs, just for simple code
+ * This is for powerup object setting.
  */
 using Newtonsoft.Json;
 using SnakeGame;
@@ -18,22 +18,11 @@ namespace GameWorld
         [JsonProperty(PropertyName = "died")]
         public bool Died { get; set; } = false;
 
+        // Constructor
         public PowerUp(int id, double x, double y)
         {
             Power = id;
             Location = new Vector2D(x, y);
         }
-        //public void Step(double x, double y)
-        //{
-            
-        //}
-
-        //public bool Collision(double x, double y)
-        //{
-        //    if (Math.Sqrt(Location.X * x + Location.Y * y) <= 5)
-        //        return true;
-
-        //    return false;
-        //}
     }
 }

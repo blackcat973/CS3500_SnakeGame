@@ -1,5 +1,5 @@
 ﻿/**
- * This code is from GameLab\Models\World.cs, just for simple code
+ * This code is for game world
  */
 using System;
 using System.Collections.Generic;
@@ -16,6 +16,7 @@ namespace GameWorld
         public Dictionary<long, Wall> Walls;
         public int Size { get; private set; }
 
+        // Default world setting
         public World(int _size)
         {
             SnakePlayers = new Dictionary<long, Snake>();
