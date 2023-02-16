@@ -187,6 +187,8 @@ namespace Server
                     Console.WriteLine("Client " + state.ID + " is disconnected.");
                     //if snake is disconnected, died and disconnected should be true on one frame.
                     theWorld.SnakePlayers[state.ID].Disconnected = true;
+                    theWorld.SnakePlayers[state.ID].Died = true;
+                    theWorld.SnakePlayers[state.ID].Alive = false;
                     return;
                 }
                 //Busy Loop. It is okay for our purposes.
@@ -207,29 +209,20 @@ namespace Server
                     //Send "all of snakes" information in the world 
                     foreach (Snake s in theWorld.SnakePlayers.Values)
                     {
-                        //We need to send the at least once to let client know if there is disconnected snake or not.
-                        if (s.Disconnected)
-                        {
-                            s.Died = true;
-                            s.Alive = false;
+
                             Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-                        }
-                        else
-                        {
-                            Networking.Send(state.TheSocket, JsonConvert.SerializeObject(s) + "\n");
-                        }
+                       
 
                     }
+
+                    IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
+
+                    foreach (long i in playersToRemove)
+                        theWorld.SnakePlayers.Remove(i);
+
                     //Send "all of powerup" information in the world. 
                     foreach (PowerUp p in theWorld.PowerUps.Values)
                         Networking.Send(state.TheSocket, JsonConvert.SerializeObject(p) + "\n");
-                }
-                //Save disconnected snake from the world.
-                IEnumerable<long> playersToRemove = theWorld.SnakePlayers.Values.Where(x => x.Disconnected).Select(x => x.UniqueID);
-                //remove all of disconnected snakes.
-                foreach (long i in playersToRemove)
-                {
-                    theWorld.SnakePlayers.Remove(i);
                 }
 
                 Networking.GetData(state);
