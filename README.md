@@ -1,4 +1,4 @@
-# CS3500_SnakeGame
-This is a snakegame assignment of CS3500.
+# MultiPlayer game
+This is a snakegame with using Multi socket and threads
 
 DO NOT COPY THIS FOR YOUR ASSIGNMENT
